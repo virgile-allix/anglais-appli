@@ -14,6 +14,7 @@ export default function Navbar() {
   const links = [
     { href: '/', label: 'Accueil' },
     { href: '/shop', label: 'Boutique' },
+    ...(user ? [{ href: '/orders', label: 'Mes commandes' }] : []),
   ]
 
   return (

@@ -12,7 +12,6 @@ const firebaseConfig = {
   measurementId: "G-MDX1Z43Z9D",
 }
 
-// Eviter les double-initialisations (hot reload en dev)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
 
 export const auth = getAuth(app)
