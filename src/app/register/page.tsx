@@ -68,6 +68,7 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                autoComplete="email"
                 className="input-field"
                 placeholder="vous@exemple.com"
               />
@@ -80,6 +81,7 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                autoComplete="new-password"
                 className="input-field"
                 placeholder="••••••••"
               />
@@ -92,6 +94,7 @@ export default function RegisterPage() {
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 required
+                autoComplete="new-password"
                 className="input-field"
                 placeholder="••••••••"
               />

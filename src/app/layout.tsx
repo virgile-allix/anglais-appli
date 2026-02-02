@@ -8,6 +8,9 @@ import { CartProvider } from '@/context/CartContext'
 export const metadata: Metadata = {
   title: 'Premium Store',
   description: 'Discover our exclusive premium collection',
+  icons: {
+    icon: '/favicon.svg',
+  },
 }
 
 export default function RootLayout({
