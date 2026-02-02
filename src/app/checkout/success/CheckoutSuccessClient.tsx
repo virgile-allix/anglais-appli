@@ -63,7 +63,7 @@ export default function CheckoutSuccessClient() {
         {status === 'loading' && (
           <>
             <div className="w-12 h-12 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-6" />
-            <p className="text-gray-400">Vérification du paiement...</p>
+            <p className="text-gray-400">Verification du paiement...</p>
           </>
         )}
 
@@ -74,7 +74,7 @@ export default function CheckoutSuccessClient() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold mb-3">Paiement confirmé</h1>
+            <h1 className="text-2xl font-bold mb-3">Paiement confirme</h1>
             <p className="text-gray-400 mb-8">Merci pour votre commande. Vous pouvez suivre son avancement depuis votre espace.</p>
             <div className="flex gap-3 justify-center">
               <Link href="/orders" className="btn-primary">Mes commandes</Link>
@@ -90,8 +90,8 @@ export default function CheckoutSuccessClient() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold mb-3">Erreur de vérification</h1>
-            <p className="text-gray-400 mb-8">Nous n&apos;avons pas pu confirmer votre paiement. Contactez le support si le montant a été débité.</p>
+            <h1 className="text-2xl font-bold mb-3">Erreur de verification</h1>
+            <p className="text-gray-400 mb-8">Nous n&apos;avons pas pu confirmer votre paiement. Contactez le support si le montant a ete debite.</p>
             <Link href="/cart" className="btn-outline">Retour au panier</Link>
           </>
         )}
