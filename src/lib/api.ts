@@ -1,8 +1,5 @@
-// URL de ton API backend (Vercel)
-// En dev : http://localhost:3001
-// En prod : https://anglais-api.vercel.app (à adapter après déploiement)
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+  process.env.NEXT_PUBLIC_API_URL || 'https://anglais-api1.vercel.app'
 
 type FetchOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
