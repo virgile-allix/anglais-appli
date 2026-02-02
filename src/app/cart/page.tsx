@@ -10,7 +10,9 @@ import { useAuth } from '@/context/AuthContext'
 import { apiFetch } from '@/lib/api'
 import { createOrder } from '@/lib/firestore'
 
-const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || ''
+const PAYPAL_CLIENT_ID =
+  process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID ||
+  'AUK8O1juYSUliqvNFTKd4tLxQ6eFnb0tXaF1raWoMbwv7ZPWq4dK59vnlUmprrbzV86yF9VzqiF4CPse'
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, clearCart, totalPrice } = useCart()
