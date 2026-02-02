@@ -6,6 +6,8 @@ import {
   getDoc,
   setDoc,
   addDoc,
+  updateDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -72,6 +74,25 @@ export async function getProducts(): Promise<Product[]> {
   }
 }
 
+export async function createProduct(product: Omit<Product, 'id'>): Promise<string> {
+  const { db } = getFirebase()
+  const docRef = await addDoc(collection(db, 'products'), {
+    ...product,
+    createdAt: Timestamp.now(),
+  })
+  return docRef.id
+}
+
+export async function updateProduct(id: string, data: Partial<Product>): Promise<void> {
+  const { db } = getFirebase()
+  await updateDoc(doc(db, 'products', id), data)
+}
+
+export async function deleteProduct(id: string): Promise<void> {
+  const { db } = getFirebase()
+  await deleteDoc(doc(db, 'products', id))
+}
+
 /* ─── Commandes ─── */
 
 export async function getUserOrders(uid: string): Promise<Order[]> {
@@ -94,6 +115,32 @@ export async function getUserOrders(uid: string): Promise<Order[]> {
   } catch {
     return []
   }
+}
+
+export async function getAllOrders(): Promise<Order[]> {
+  try {
+    const { db } = getFirebase()
+    const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'))
+    const snap = await getDocs(q)
+    return snap.docs.map((d) => {
+      const data = d.data()
+      return {
+        id: d.id,
+        ...data,
+        createdAt: data.createdAt?.toDate?.() || new Date(),
+      } as Order
+    })
+  } catch {
+    return []
+  }
+}
+
+export async function updateOrderStatus(
+  orderId: string,
+  status: Order['status']
+): Promise<void> {
+  const { db } = getFirebase()
+  await updateDoc(doc(db, 'orders', orderId), { status })
 }
 
 export async function createOrder(
@@ -123,6 +170,25 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     }
   } catch {
     return null
+  }
+}
+
+export async function getAllUsers(): Promise<UserProfile[]> {
+  try {
+    const { db } = getFirebase()
+    const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'))
+    const snap = await getDocs(q)
+    return snap.docs.map((d) => {
+      const data = d.data()
+      return {
+        uid: d.id,
+        email: data.email || '',
+        isAdmin: data.isAdmin || false,
+        createdAt: data.createdAt?.toDate?.() || new Date(),
+      }
+    })
+  } catch {
+    return []
   }
 }
 

@@ -2,31 +2,29 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ─── Produits : lecture publique, écriture admin uniquement ───
+    // Products: public read, admin write
     match /products/{productId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // ─── Utilisateurs : lecture/création de son propre profil ───
+    // Users: owner read/create, admin read
     match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == userId);
       allow create: if request.auth != null && request.auth.uid == userId
                     && request.resource.data.isAdmin == false;
-      // Interdire la modification du champ isAdmin par le client
-      allow update: if request.auth != null && request.auth.uid == userId
-                    && request.resource.data.isAdmin == resource.data.isAdmin;
+      allow update: if isAdmin() ||
+                    (request.auth != null && request.auth.uid == userId
+                     && request.resource.data.isAdmin == resource.data.isAdmin);
     }
 
-    // ─── Commandes : lecture de ses propres commandes, création pour soi-même ───
+    // Orders: owner read/create, admin read/update
     match /orders/{orderId} {
-      allow read: if request.auth != null && resource.data.uid == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
-      // Pas de modification/suppression côté client
-      allow update, delete: if false;
+      allow read: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid);
+      allow create: if isAdmin() || (request.auth != null && request.resource.data.uid == request.auth.uid);
+      allow update, delete: if isAdmin();
     }
 
-    // ─── Helper : vérifier si l'utilisateur est admin ───
     function isAdmin() {
       return request.auth != null
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;

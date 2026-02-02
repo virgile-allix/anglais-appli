@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useCart } from '@/context/CartContext'
 
 export default function Navbar() {
-  const { user, logout } = useAuth()
+  const { user, logout, profile } = useAuth()
   const { totalItems } = useCart()
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -15,6 +15,7 @@ export default function Navbar() {
     { href: '/', label: 'Accueil' },
     { href: '/shop', label: 'Boutique' },
     ...(user ? [{ href: '/orders', label: 'Mes commandes' }] : []),
+    ...(profile?.isAdmin ? [{ href: '/admin', label: 'Admin' }] : []),
   ]
 
   return (
