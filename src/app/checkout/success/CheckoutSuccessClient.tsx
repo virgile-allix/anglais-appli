@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
 import { useCart } from '@/context/CartContext'
-import { createOrder } from '@/lib/firestore'
+import { createOrder, incrementPromoUsage } from '@/lib/firestore'
 import { apiFetch } from '@/lib/api'
 
 export default function CheckoutSuccessClient() {
@@ -24,18 +24,38 @@ export default function CheckoutSuccessClient() {
         const token = await user.getIdToken()
 
         // Verify Stripe session via API
-        await apiFetch('/stripe/verify-session', {
+        const result = await apiFetch<{
+          verified: boolean
+          sessionId: string
+          amountTotal: number
+          promoId: string
+          discountPercent: number
+        }>('/stripe/verify-session', {
           method: 'POST',
           body: { sessionId },
           token,
         })
+
+        // Incrementer l'usage du code promo si utilise
+        const promoId = result.promoId || ''
+        if (promoId) {
+          try {
+            await incrementPromoUsage(promoId)
+          } catch {
+            // Non bloquant
+          }
+          localStorage.removeItem('ps-promo')
+        }
+
+        // Calculer le total final (montant Stripe en centimes -> euros)
+        const paidTotal = result.amountTotal ? result.amountTotal / 100 : totalPrice
 
         // Save order in Firestore
         if (items.length > 0) {
           await createOrder({
             uid: user.uid,
             items: items.map((i) => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
-            total: totalPrice,
+            total: paidTotal,
             status: 'paid',
             paymentId: sessionId,
             paymentMethod: 'stripe',

@@ -8,7 +8,7 @@ import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js'
 import { useCart } from '@/context/CartContext'
 import { useAuth } from '@/context/AuthContext'
 import { apiFetch } from '@/lib/api'
-import { createOrder, getProducts, validatePromoCode, incrementPromoUsage, type PromoCode } from '@/lib/firestore'
+import { createOrder, getProducts, validatePromoCode, incrementPromoUsage, type PromoCode, type Product } from '@/lib/firestore'
 
 const PAYPAL_CLIENT_ID =
   process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID ||
@@ -21,6 +21,7 @@ export default function CartPage() {
   const [stripeLoading, setStripeLoading] = useState(false)
   const [error, setError] = useState('')
   const [stockWarning, setStockWarning] = useState('')
+  const [stockMap, setStockMap] = useState<Record<string, number>>({})
 
   // Promo code
   const [promoInput, setPromoInput] = useState('')
@@ -31,10 +32,14 @@ export default function CartPage() {
   const discount = appliedPromo ? totalPrice * (appliedPromo.discount / 100) : 0
   const finalPrice = totalPrice - discount
 
-  // Verifier le stock des articles du panier
+  // Charger les stocks et nettoyer le panier
   useEffect(() => {
     if (items.length === 0) return
     getProducts().then((products) => {
+      const map: Record<string, number> = {}
+      products.forEach((p) => { map[p.id] = p.stock })
+      setStockMap(map)
+
       const removed: string[] = []
       for (const item of items) {
         const product = products.find((p) => p.id === item.id)
@@ -83,10 +88,21 @@ export default function CartPage() {
 
     setStripeLoading(true)
     try {
+      // Stocker les infos promo pour la page success
+      if (appliedPromo) {
+        localStorage.setItem('ps-promo', JSON.stringify({ id: appliedPromo.id, discount: appliedPromo.discount }))
+      } else {
+        localStorage.removeItem('ps-promo')
+      }
+
       const token = await user.getIdToken()
       const { url } = await apiFetch<{ url: string }>('/stripe/create-checkout', {
         method: 'POST',
-        body: { items },
+        body: {
+          items,
+          discountPercent: appliedPromo?.discount || 0,
+          promoId: appliedPromo?.id || null,
+        },
         token,
       })
       window.location.href = url
@@ -103,7 +119,10 @@ export default function CartPage() {
     const token = await user.getIdToken()
     const { orderId } = await apiFetch<{ orderId: string }>('/paypal/create-order', {
       method: 'POST',
-      body: { items },
+      body: {
+        items,
+        discountPercent: appliedPromo?.discount || 0,
+      },
       token,
     })
     return orderId
@@ -148,7 +167,7 @@ export default function CartPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center"
         >
-          <p className="text-6xl mb-6 text-gray-700">◇</p>
+          <p className="text-6xl mb-6 text-gray-700">&#9671;</p>
           <h1 className="text-2xl font-bold mb-3">Votre panier est vide</h1>
           <p className="text-gray-500 mb-8">Parcourez notre boutique pour trouver votre bonheur.</p>
           <Link href="/shop" className="btn-primary">Voir la boutique</Link>
@@ -170,38 +189,49 @@ export default function CartPage() {
 
         {/* Items */}
         <div className="flex flex-col gap-4 mb-10">
-          {items.map((item) => (
-            <motion.div
-              key={item.id}
-              layout
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="card p-5 flex items-center gap-5"
-            >
-              <div className="w-16 h-16 bg-dark-tertiary rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
-                {item.image ? (
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-2xl text-gray-700">◆</span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold truncate">{item.name}</h3>
-                <p className="text-gold text-sm">{item.price.toFixed(2)} &euro;</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-8 h-8 rounded-lg bg-dark-tertiary text-gray-400 hover:text-white transition-colors flex items-center justify-center">-</button>
-                <span className="w-8 text-center text-sm">{item.quantity}</span>
-                <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="w-8 h-8 rounded-lg bg-dark-tertiary text-gray-400 hover:text-white transition-colors flex items-center justify-center">+</button>
-              </div>
-              <p className="font-bold text-sm w-20 text-right">{(item.price * item.quantity).toFixed(2)} &euro;</p>
-              <button onClick={() => removeItem(item.id)} className="text-gray-600 hover:text-red-400 transition-colors">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </motion.div>
-          ))}
+          {items.map((item) => {
+            const maxStock = stockMap[item.id] ?? Infinity
+            const atMax = item.quantity >= maxStock
+            return (
+              <motion.div
+                key={item.id}
+                layout
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="card p-5 flex items-center gap-5"
+              >
+                <div className="w-16 h-16 bg-dark-tertiary rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+                  {item.image ? (
+                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl text-gray-700">&#9670;</span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold truncate">{item.name}</h3>
+                  <p className="text-gold text-sm">{item.price.toFixed(2)} &euro;</p>
+                  {atMax && maxStock !== Infinity && (
+                    <p className="text-xs text-yellow-400 mt-0.5">Max : {maxStock}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-8 h-8 rounded-lg bg-dark-tertiary text-gray-400 hover:text-white transition-colors flex items-center justify-center">-</button>
+                  <span className="w-8 text-center text-sm">{item.quantity}</span>
+                  <button
+                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                    disabled={atMax}
+                    className="w-8 h-8 rounded-lg bg-dark-tertiary text-gray-400 hover:text-white transition-colors flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
+                  >+</button>
+                </div>
+                <p className="font-bold text-sm w-20 text-right">{(item.price * item.quantity).toFixed(2)} &euro;</p>
+                <button onClick={() => removeItem(item.id)} className="text-gray-600 hover:text-red-400 transition-colors">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </motion.div>
+            )
+          })}
         </div>
 
         {/* Avertissement stock */}
@@ -221,7 +251,7 @@ export default function CartPage() {
           </div>
         )}
 
-        {/* Récapitulatif + Paiement */}
+        {/* Recapitulatif + Paiement */}
         <div className="card p-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-gray-400">Sous-total</span>
@@ -309,7 +339,7 @@ export default function CartPage() {
                   style={{ layout: 'horizontal', color: 'gold', shape: 'pill', label: 'pay' }}
                   createOrder={handlePayPalCreate}
                   onApprove={handlePayPalApprove}
-                  onError={() => setError('Erreur PayPal. Réessayez.')}
+                  onError={() => setError('Erreur PayPal. Reessayez.')}
                 />
               </PayPalScriptProvider>
             ) : (

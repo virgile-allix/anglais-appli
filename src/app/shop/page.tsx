@@ -16,7 +16,7 @@ const item = {
 }
 
 export default function ShopPage() {
-  const { addItem } = useCart()
+  const { addItem, items: cartItems } = useCart()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -73,6 +73,8 @@ export default function ShopPage() {
           >
             {products.map((product) => {
               const outOfStock = product.stock <= 0
+              const inCart = cartItems.find((c) => c.id === product.id)?.quantity || 0
+              const maxReached = inCart >= product.stock
               return (
                 <motion.div key={product.id} variants={item} className="card group">
                   {/* Image */}
@@ -109,7 +111,7 @@ export default function ShopPage() {
                       {product.price.toFixed(2)} &euro;
                     </p>
                     <button
-                      disabled={outOfStock}
+                      disabled={outOfStock || maxReached}
                       onClick={() =>
                         addItem({
                           id: product.id,
@@ -120,7 +122,7 @@ export default function ShopPage() {
                       }
                       className="btn-primary w-full text-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {outOfStock ? 'Sold Out' : 'Ajouter au panier'}
+                      {outOfStock ? 'Sold Out' : maxReached ? `Max stock (${product.stock})` : 'Ajouter au panier'}
                     </button>
                   </div>
                 </motion.div>

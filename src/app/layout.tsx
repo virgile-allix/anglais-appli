@@ -3,6 +3,7 @@ import './globals.css'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import Chatbot from '@/components/Chatbot'
+import CookieConsent from '@/components/CookieConsent'
 import { AuthProvider } from '@/context/AuthContext'
 import { CartProvider } from '@/context/CartContext'
 
@@ -28,6 +29,7 @@ export default function RootLayout({
             <main className="flex-1">{children}</main>
             <Footer />
             <Chatbot />
+            <CookieConsent />
           </CartProvider>
         </AuthProvider>
       </body>
