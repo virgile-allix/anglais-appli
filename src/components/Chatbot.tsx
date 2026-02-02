@@ -39,8 +39,8 @@ const FAQ: { keywords: string[]; answer: string }[] = [
     answer: 'Si un produit est en rupture de stock, il sera marqué "Sold Out". Vous pouvez consulter régulièrement notre boutique pour voir les réapprovisionnements.',
   },
   {
-    keywords: ['contact', 'email', 'telephone', 'support', 'aide', 'help'],
-    answer: 'Pour toute question, vous pouvez nous contacter par email a support@premiumstore.fr ou utiliser ce chat. Notre équipe répond sous 24h.',
+    keywords: ['contact', 'email', 'telephone', 'support', 'aide', 'help', 'ticket', 'probleme'],
+    answer: 'Vous pouvez creer un ticket support directement depuis la page /support. Notre equipe vous repondra dans les plus brefs delais. Vous pouvez aussi utiliser ce chat pour les questions frequentes.',
   },
   {
     keywords: ['prix', 'tarif', 'cher', 'cout', 'combien'],
@@ -68,7 +68,7 @@ function findAnswer(input: string): string {
     }
   }
 
-  return 'Je ne suis pas sur de comprendre votre question. Essayez de me demander des informations sur : la livraison, les retours, le paiement, le suivi de commande, les codes promo, ou le stock. Sinon, contactez notre support a support@premiumstore.fr.'
+  return 'Je ne suis pas sur de comprendre votre question. Vous pouvez creer un ticket support pour obtenir une reponse personnalisee de notre equipe : rendez-vous sur la page Support (/support). Sinon, essayez de me demander des informations sur la livraison, les retours, le paiement ou le stock.'
 }
 
 export default function Chatbot() {
@@ -180,7 +180,7 @@ export default function Chatbot() {
 
             {/* Quick actions */}
             <div className="px-4 pb-2 flex gap-2 flex-wrap">
-              {['Livraison', 'Retours', 'Paiement', 'Suivi commande'].map((q) => (
+              {['Livraison', 'Retours', 'Paiement', 'Support'].map((q) => (
                 <button
                   key={q}
                   onClick={() => {

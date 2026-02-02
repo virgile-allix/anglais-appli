@@ -25,6 +25,20 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // Promo codes: public read (for validation), admin write
+    match /promoCodes/{promoId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Tickets: owner read/create/update (add messages), admin full access
+    match /tickets/{ticketId} {
+      allow read: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid);
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow update: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
     function isAdmin() {
       return request.auth != null
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;

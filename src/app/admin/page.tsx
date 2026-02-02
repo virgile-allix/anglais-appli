@@ -17,10 +17,14 @@ import {
   createPromoCode,
   updatePromoCode,
   deletePromoCode,
+  getAllTickets,
+  addTicketMessage,
+  updateTicketStatus,
   type Order,
   type Product,
   type UserProfile,
   type PromoCode,
+  type Ticket,
 } from '@/lib/firestore'
 
 const STATUS_OPTIONS: Order['status'][] = ['pending', 'paid', 'shipped', 'delivered']
@@ -31,7 +35,14 @@ const STATUS_LABELS: Record<Order['status'], { label: string; color: string }> =
   delivered: { label: 'Livree', color: 'text-gray-400 bg-gray-400/10' },
 }
 
-type Tab = 'dashboard' | 'products' | 'orders' | 'users' | 'promos'
+type Tab = 'dashboard' | 'products' | 'orders' | 'users' | 'promos' | 'support'
+
+const TICKET_STATUS_LABELS: Record<Ticket['status'], { label: string; color: string }> = {
+  open: { label: 'Ouvert', color: 'text-green-400 bg-green-400/10' },
+  in_progress: { label: 'En cours', color: 'text-yellow-400 bg-yellow-400/10' },
+  closed: { label: 'Ferme', color: 'text-gray-400 bg-gray-400/10' },
+}
+const TICKET_STATUS_OPTIONS: Ticket['status'][] = ['open', 'in_progress', 'closed']
 
 type ProductForm = {
   name: string
@@ -73,6 +84,7 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [users, setUsers] = useState<UserProfile[]>([])
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([])
+  const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -86,6 +98,10 @@ export default function AdminPage() {
   const [searchProduct, setSearchProduct] = useState('')
   const [searchOrder, setSearchOrder] = useState('')
   const [filterStatus, setFilterStatus] = useState<Order['status'] | 'all'>('all')
+  const [openTicketId, setOpenTicketId] = useState<string | null>(null)
+  const [ticketReply, setTicketReply] = useState('')
+  const [sendingReply, setSendingReply] = useState(false)
+  const [filterTicketStatus, setFilterTicketStatus] = useState<Ticket['status'] | 'all'>('all')
 
   const isAdmin = Boolean(profile?.isAdmin)
 
@@ -106,12 +122,13 @@ export default function AdminPage() {
       return
     }
 
-    Promise.all([getProducts(), getAllOrders(), getAllUsers(), getPromoCodes()])
-      .then(([p, o, u, pc]) => {
+    Promise.all([getProducts(), getAllOrders(), getAllUsers(), getPromoCodes(), getAllTickets()])
+      .then(([p, o, u, pc, tk]) => {
         setProducts(p)
         setOrders(o)
         setUsers(u)
         setPromoCodes(pc)
+        setTickets(tk)
       })
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : 'Erreur chargement')
@@ -154,8 +171,10 @@ export default function AdminPage() {
       totalUsers: users.length,
       totalOrders: orders.length,
       activePromos: promoCodes.filter((p) => p.active).length,
+      openTickets: tickets.filter((t) => t.status === 'open').length,
+      totalTickets: tickets.length,
     }
-  }, [orders, products, users, promoCodes])
+  }, [orders, products, users, promoCodes, tickets])
 
   /* ─── Filtered data ─── */
 
@@ -358,6 +377,54 @@ export default function AdminPage() {
     }
   }
 
+  /* ─── Tickets ─── */
+
+  const filteredTickets = useMemo(() => {
+    if (filterTicketStatus === 'all') return tickets
+    return tickets.filter((t) => t.status === filterTicketStatus)
+  }, [tickets, filterTicketStatus])
+
+  const handleTicketReply = async (ticketId: string) => {
+    if (!ticketReply.trim() || !profile) return
+    setSendingReply(true)
+    try {
+      await addTicketMessage(ticketId, {
+        sender: 'admin',
+        senderEmail: profile.email,
+        text: ticketReply.trim(),
+      })
+      setTickets((prev) =>
+        prev.map((t) =>
+          t.id === ticketId
+            ? {
+                ...t,
+                messages: [
+                  ...t.messages,
+                  { sender: 'admin' as const, senderEmail: profile.email, text: ticketReply.trim(), createdAt: new Date() },
+                ],
+                updatedAt: new Date(),
+              }
+            : t
+        )
+      )
+      setTicketReply('')
+      setSuccess('Reponse envoyee.')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur envoi reponse')
+    } finally {
+      setSendingReply(false)
+    }
+  }
+
+  const handleTicketStatusChange = async (ticketId: string, status: Ticket['status']) => {
+    try {
+      await updateTicketStatus(ticketId, status)
+      setTickets((prev) => prev.map((t) => (t.id === ticketId ? { ...t, status, updatedAt: new Date() } : t)))
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur statut ticket')
+    }
+  }
+
   /* ─── Guards ─── */
 
   if (authLoading || loading) {
@@ -387,6 +454,7 @@ export default function AdminPage() {
     { key: 'orders', label: `Commandes (${orders.length})` },
     { key: 'users', label: `Utilisateurs (${users.length})` },
     { key: 'promos', label: `Promos (${promoCodes.length})` },
+    { key: 'support', label: `Support (${tickets.filter((t) => t.status !== 'closed').length})` },
   ]
 
   return (
@@ -487,10 +555,18 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Codes promo actifs */}
-            <div className="card p-5">
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Codes promo actifs</p>
-              <p className="text-2xl font-bold text-gold mt-1">{stats.activePromos}</p>
+            {/* Extras */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="card p-5">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Codes promo actifs</p>
+                <p className="text-2xl font-bold text-gold mt-1">{stats.activePromos}</p>
+              </div>
+              <div className="card p-5">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Tickets ouverts</p>
+                <p className={`text-2xl font-bold mt-1 ${stats.openTickets > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
+                  {stats.openTickets} <span className="text-sm text-gray-500 font-normal">/ {stats.totalTickets}</span>
+                </p>
+              </div>
             </div>
 
             {/* Dernières commandes */}
@@ -813,6 +889,118 @@ export default function AdminPage() {
                 </div>
               )}
             </section>
+          </motion.div>
+        )}
+
+        {/* ═══════ SUPPORT ═══════ */}
+        {activeTab === 'support' && (
+          <motion.div key="support" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-6">
+            {/* Filtre */}
+            <div className="flex gap-3">
+              <select className="input-field w-auto" value={filterTicketStatus}
+                onChange={(e) => { setFilterTicketStatus(e.target.value as Ticket['status'] | 'all'); setOpenTicketId(null) }}>
+                <option value="all">Tous les tickets</option>
+                {TICKET_STATUS_OPTIONS.map((s) => (
+                  <option key={s} value={s}>{TICKET_STATUS_LABELS[s].label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Conversation ouverte */}
+            {openTicketId && (() => {
+              const ticket = tickets.find((t) => t.id === openTicketId)
+              if (!ticket) return null
+              return (
+                <div className="flex flex-col gap-4">
+                  <button onClick={() => { setOpenTicketId(null); setTicketReply('') }}
+                    className="text-sm text-gray-500 hover:text-white transition-colors self-start">
+                    &larr; Retour
+                  </button>
+                  <div className="card p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                      <div>
+                        <h2 className="text-lg font-semibold">{ticket.subject}</h2>
+                        <p className="text-xs text-gray-500">
+                          {ticket.email} &middot; #{ticket.id.slice(0, 8)} &middot; {ticket.createdAt.toLocaleDateString('fr-FR')}
+                        </p>
+                      </div>
+                      <select className="input-field text-sm w-auto" value={ticket.status}
+                        onChange={(e) => handleTicketStatusChange(ticket.id, e.target.value as Ticket['status'])}>
+                        {TICKET_STATUS_OPTIONS.map((s) => (
+                          <option key={s} value={s}>{TICKET_STATUS_LABELS[s].label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Messages */}
+                    <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto mb-4 border-t border-white/5 pt-4">
+                      {ticket.messages.map((msg, i) => (
+                        <div key={i} className={`flex ${msg.sender === 'admin' ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm ${
+                            msg.sender === 'admin'
+                              ? 'bg-gold/20 text-white rounded-br-md'
+                              : 'bg-white/10 text-gray-200 rounded-bl-md'
+                          }`}>
+                            <p className="text-xs text-gray-500 mb-1">
+                              {msg.sender === 'admin' ? 'Vous (Admin)' : msg.senderEmail || 'Client'} &middot; {msg.createdAt.toLocaleString('fr-FR')}
+                            </p>
+                            <p className="whitespace-pre-wrap">{msg.text}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Repondre */}
+                    <div className="flex gap-2">
+                      <textarea className="input-field flex-1" placeholder="Votre reponse..." value={ticketReply}
+                        onChange={(e) => setTicketReply(e.target.value)} rows={2} />
+                      <button onClick={() => handleTicketReply(ticket.id)} disabled={sendingReply || !ticketReply.trim()}
+                        className="btn-primary px-6 self-end disabled:opacity-50">
+                        {sendingReply ? '...' : 'Envoyer'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Liste tickets */}
+            {!openTicketId && (
+              <section className="card p-6">
+                <h2 className="text-xl font-semibold mb-4">Tickets ({filteredTickets.length})</h2>
+                {filteredTickets.length === 0 ? (
+                  <p className="text-gray-500 text-sm py-8 text-center">Aucun ticket.</p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {filteredTickets.map((ticket) => {
+                      const lastMsg = ticket.messages[ticket.messages.length - 1]
+                      const unread = lastMsg?.sender === 'client'
+                      return (
+                        <button key={ticket.id} onClick={() => setOpenTicketId(ticket.id)}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3 text-left hover:bg-white/5 rounded-lg p-3 -m-3 transition-colors">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold truncate">{ticket.subject}</p>
+                              {unread && (
+                                <span className="w-2 h-2 rounded-full bg-gold shrink-0" />
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-0.5">{ticket.email}</p>
+                            <p className="text-xs text-gray-600 truncate mt-0.5">{lastMsg?.text || ''}</p>
+                            <p className="text-xs text-gray-600 mt-1">
+                              {ticket.messages.length} msg &middot; {ticket.updatedAt.toLocaleDateString('fr-FR')}
+                            </p>
+                          </div>
+                          <span className={`text-xs font-semibold px-3 py-1 rounded-full shrink-0 ${TICKET_STATUS_LABELS[ticket.status].color}`}>
+                            {TICKET_STATUS_LABELS[ticket.status].label}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </section>
+            )}
           </motion.div>
         )}
       </div>

@@ -14,7 +14,7 @@ export default function Navbar() {
   const links = [
     { href: '/', label: 'Accueil' },
     { href: '/shop', label: 'Boutique' },
-    ...(user ? [{ href: '/orders', label: 'Mes commandes' }] : []),
+    ...(user ? [{ href: '/orders', label: 'Mes commandes' }, { href: '/support', label: 'Support' }] : []),
     ...(profile?.isAdmin ? [{ href: '/admin', label: 'Admin' }] : []),
   ]
 

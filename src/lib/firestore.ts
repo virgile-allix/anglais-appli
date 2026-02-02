@@ -283,6 +283,115 @@ export async function incrementPromoUsage(id: string): Promise<void> {
   }
 }
 
+/* ─── Tickets support ─── */
+
+export type TicketMessage = {
+  sender: 'client' | 'admin'
+  senderEmail: string
+  text: string
+  createdAt: Date
+}
+
+export type Ticket = {
+  id: string
+  uid: string
+  email: string
+  subject: string
+  status: 'open' | 'in_progress' | 'closed'
+  messages: TicketMessage[]
+  createdAt: Date
+  updatedAt: Date
+}
+
+export async function createTicket(
+  ticket: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<string> {
+  const { db } = getFirebase()
+  const now = Timestamp.now()
+  const messages = ticket.messages.map((m) => ({
+    ...m,
+    createdAt: now,
+  }))
+  const docRef = await addDoc(collection(db, 'tickets'), {
+    uid: ticket.uid,
+    email: ticket.email,
+    subject: ticket.subject,
+    status: ticket.status,
+    messages,
+    createdAt: now,
+    updatedAt: now,
+  })
+  return docRef.id
+}
+
+function parseTicketDoc(d: { id: string; data: () => Record<string, unknown> }): Ticket {
+  const raw = d.data() as Record<string, unknown>
+  const msgs = (Array.isArray(raw.messages) ? raw.messages : []) as Array<Record<string, unknown>>
+  return {
+    id: d.id,
+    uid: (raw.uid as string) || '',
+    email: (raw.email as string) || '',
+    subject: (raw.subject as string) || '',
+    status: (raw.status as Ticket['status']) || 'open',
+    messages: msgs.map((m) => ({
+      sender: (m.sender as TicketMessage['sender']) || 'client',
+      senderEmail: (m.senderEmail as string) || '',
+      text: (m.text as string) || '',
+      createdAt: (m.createdAt as { toDate?: () => Date })?.toDate?.() || new Date(),
+    })),
+    createdAt: (raw.createdAt as { toDate?: () => Date })?.toDate?.() || new Date(),
+    updatedAt: (raw.updatedAt as { toDate?: () => Date })?.toDate?.() || new Date(),
+  }
+}
+
+export async function getUserTickets(uid: string): Promise<Ticket[]> {
+  try {
+    const { db } = getFirebase()
+    const q = query(
+      collection(db, 'tickets'),
+      where('uid', '==', uid),
+      orderBy('updatedAt', 'desc')
+    )
+    const snap = await getDocs(q)
+    return snap.docs.map(parseTicketDoc)
+  } catch {
+    return []
+  }
+}
+
+export async function getAllTickets(): Promise<Ticket[]> {
+  try {
+    const { db } = getFirebase()
+    const q = query(collection(db, 'tickets'), orderBy('updatedAt', 'desc'))
+    const snap = await getDocs(q)
+    return snap.docs.map(parseTicketDoc)
+  } catch {
+    return []
+  }
+}
+
+export async function addTicketMessage(
+  ticketId: string,
+  message: Omit<TicketMessage, 'createdAt'>
+): Promise<void> {
+  const { db } = getFirebase()
+  const ref = doc(db, 'tickets', ticketId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) return
+  const data = snap.data()
+  const messages = Array.isArray(data.messages) ? data.messages : []
+  messages.push({ ...message, createdAt: Timestamp.now() })
+  await updateDoc(ref, { messages, updatedAt: Timestamp.now() })
+}
+
+export async function updateTicketStatus(
+  ticketId: string,
+  status: Ticket['status']
+): Promise<void> {
+  const { db } = getFirebase()
+  await updateDoc(doc(db, 'tickets', ticketId), { status, updatedAt: Timestamp.now() })
+}
+
 /* ─── Seed : peupler Firestore avec des produits de démo ─── */
 
 export async function seedProducts(): Promise<void> {
