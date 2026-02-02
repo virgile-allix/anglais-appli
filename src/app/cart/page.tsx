@@ -68,7 +68,8 @@ export default function CartPage() {
         items: items.map((i) => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
         total: totalPrice,
         status: 'paid',
-        stripeSessionId: `paypal_${data.orderID}`,
+        paymentId: data.orderID,
+        paymentMethod: 'paypal',
       })
       clearCart()
       router.push('/orders')
