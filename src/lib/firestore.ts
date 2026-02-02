@@ -1,4 +1,4 @@
-import { db } from './firebase'
+import { getFirebase } from './firebase'
 import {
   collection,
   doc,
@@ -63,6 +63,7 @@ const FALLBACK_PRODUCTS: Product[] = [
 
 export async function getProducts(): Promise<Product[]> {
   try {
+    const { db } = getFirebase()
     const snap = await getDocs(collection(db, 'products'))
     if (snap.empty) return FALLBACK_PRODUCTS
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Product)
@@ -75,6 +76,7 @@ export async function getProducts(): Promise<Product[]> {
 
 export async function getUserOrders(uid: string): Promise<Order[]> {
   try {
+    const { db } = getFirebase()
     const q = query(
       collection(db, 'orders'),
       where('uid', '==', uid),
@@ -97,6 +99,7 @@ export async function getUserOrders(uid: string): Promise<Order[]> {
 export async function createOrder(
   order: Omit<Order, 'id' | 'createdAt'>
 ): Promise<string> {
+  const { db } = getFirebase()
   const docRef = await addDoc(collection(db, 'orders'), {
     ...order,
     createdAt: Timestamp.now(),
@@ -108,6 +111,7 @@ export async function createOrder(
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   try {
+    const { db } = getFirebase()
     const snap = await getDoc(doc(db, 'users', uid))
     if (!snap.exists()) return null
     const data = snap.data()
@@ -123,6 +127,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 }
 
 export async function saveUserProfile(uid: string, email: string): Promise<UserProfile> {
+  const { db } = getFirebase()
   await setDoc(doc(db, 'users', uid), {
     email,
     isAdmin: false,
@@ -134,6 +139,7 @@ export async function saveUserProfile(uid: string, email: string): Promise<UserP
 /* ─── Seed : peupler Firestore avec des produits de démo ─── */
 
 export async function seedProducts(): Promise<void> {
+  const { db } = getFirebase()
   const products = [
     { name: 'Produit Alpha', price: 49.99, description: 'Description du produit Alpha.', image: '', category: 'general' },
     { name: 'Produit Beta', price: 79.99, description: 'Description du produit Beta.', image: '', category: 'general' },

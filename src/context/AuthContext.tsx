@@ -9,7 +9,7 @@ import {
   signOut,
 } from 'firebase/auth'
 import { doc, setDoc, getDoc, Timestamp } from 'firebase/firestore'
-import { auth, db } from '@/lib/firebase'
+import { getFirebase } from '@/lib/firebase'
 
 export type UserProfile = {
   uid: string
@@ -38,6 +38,7 @@ const AuthContext = createContext<AuthContextType>({
 
 async function loadProfile(uid: string): Promise<UserProfile | null> {
   try {
+    const { db } = getFirebase()
     const snap = await getDoc(doc(db, 'users', uid))
     if (!snap.exists()) return null
     const data = snap.data()
@@ -53,6 +54,7 @@ async function loadProfile(uid: string): Promise<UserProfile | null> {
 }
 
 async function saveProfile(user: User): Promise<UserProfile> {
+  const { db } = getFirebase()
   const profile: Omit<UserProfile, 'uid' | 'createdAt'> & { createdAt: ReturnType<typeof Timestamp.now> } = {
     email: user.email || '',
     isAdmin: false,
@@ -74,20 +76,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Charger le profil Firestore à chaque changement d'auth
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser)
-      if (firebaseUser) {
-        const p = await loadProfile(firebaseUser.uid)
-        setProfile(p)
-      } else {
-        setProfile(null)
-      }
+    let unsubscribe = () => {}
+    try {
+      const { auth } = getFirebase()
+      unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        setUser(firebaseUser)
+        if (firebaseUser) {
+          const p = await loadProfile(firebaseUser.uid)
+          setProfile(p)
+        } else {
+          setProfile(null)
+        }
+        setLoading(false)
+      })
+    } catch {
       setLoading(false)
-    })
-    return unsubscribe
+    }
+    return () => unsubscribe()
   }, [])
 
   const login = async (email: string, password: string) => {
+    const { auth } = getFirebase()
     const { user: u } = await signInWithEmailAndPassword(auth, email, password)
     const p = await loadProfile(u.uid)
     // Si le profil n'existe pas encore (ancien compte), le créer
@@ -100,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const register = async (email: string, password: string) => {
+    const { auth } = getFirebase()
     const { user: u } = await createUserWithEmailAndPassword(auth, email, password)
     // Sauvegarder le profil en base
     const newProfile = await saveProfile(u)
@@ -107,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = async () => {
+    const { auth } = getFirebase()
     await signOut(auth)
     setProfile(null)
   }

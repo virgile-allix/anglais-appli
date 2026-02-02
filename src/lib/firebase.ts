@@ -1,6 +1,6 @@
-import { initializeApp, getApps } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
+import { getAuth, type Auth } from 'firebase/auth'
+import { getFirestore, type Firestore } from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,8 +12,42 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 }
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
+type FirebaseServices = {
+  app: FirebaseApp
+  auth: Auth
+  db: Firestore
+}
 
-export const auth = getAuth(app)
-export const db = getFirestore(app)
-export default app
+let cached: FirebaseServices | null = null
+
+function hasConfig() {
+  return Boolean(
+    firebaseConfig.apiKey &&
+      firebaseConfig.authDomain &&
+      firebaseConfig.projectId &&
+      firebaseConfig.storageBucket &&
+      firebaseConfig.messagingSenderId &&
+      firebaseConfig.appId
+  )
+}
+
+export function getFirebase(): FirebaseServices {
+  if (typeof window === 'undefined') {
+    throw new Error('Firebase client used during server render.')
+  }
+
+  if (!hasConfig()) {
+    throw new Error('Firebase config manquante.')
+  }
+
+  if (!cached) {
+    const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
+    cached = {
+      app,
+      auth: getAuth(app),
+      db: getFirestore(app),
+    }
+  }
+
+  return cached
+}
