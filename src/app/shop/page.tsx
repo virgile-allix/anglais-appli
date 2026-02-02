@@ -50,58 +50,82 @@ export default function ShopPage() {
           </div>
         )}
 
+        {/* Aucun produit */}
+        {!loading && products.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-20"
+          >
+            <p className="text-6xl mb-6 text-gray-700">&#9671;</p>
+            <h2 className="text-xl font-semibold mb-3">Aucun produit disponible</h2>
+            <p className="text-gray-500">Revenez bientôt, notre catalogue sera mis à jour.</p>
+          </motion.div>
+        )}
+
         {/* Grille de produits */}
-        {!loading && (
+        {!loading && products.length > 0 && (
           <motion.div
             variants={container}
             initial="hidden"
             animate="visible"
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8"
           >
-            {products.map((product) => (
-              <motion.div key={product.id} variants={item} className="card group">
-                {/* Image */}
-                <div className="aspect-square bg-dark-tertiary flex items-center justify-center overflow-hidden">
-                  {product.image ? (
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  ) : (
-                    <span className="text-6xl text-gray-700 group-hover:scale-110 transition-transform duration-500">
-                      ◆
-                    </span>
-                  )}
-                </div>
+            {products.map((product) => {
+              const outOfStock = product.stock <= 0
+              return (
+                <motion.div key={product.id} variants={item} className="card group">
+                  {/* Image */}
+                  <div className="aspect-square bg-dark-tertiary flex items-center justify-center overflow-hidden relative">
+                    {product.image ? (
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <span className="text-6xl text-gray-700 group-hover:scale-110 transition-transform duration-500">
+                        &#9670;
+                      </span>
+                    )}
+                    {outOfStock && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <span className="text-sm font-semibold text-red-400 bg-red-400/10 px-3 py-1 rounded-full">
+                          Sold Out
+                        </span>
+                      </div>
+                    )}
+                  </div>
 
-                {/* Info */}
-                <div className="p-5">
-                  <h3 className="font-semibold text-lg mb-1">{product.name}</h3>
-                  {product.description && (
-                    <p className="text-sm text-gray-500 mb-3 line-clamp-2">
-                      {product.description}
+                  {/* Info */}
+                  <div className="p-5">
+                    <h3 className="font-semibold text-lg mb-1">{product.name}</h3>
+                    {product.description && (
+                      <p className="text-sm text-gray-500 mb-3 line-clamp-2">
+                        {product.description}
+                      </p>
+                    )}
+                    <p className="text-gold font-bold text-xl mb-4">
+                      {product.price.toFixed(2)} &euro;
                     </p>
-                  )}
-                  <p className="text-gold font-bold text-xl mb-4">
-                    {product.price.toFixed(2)} &euro;
-                  </p>
-                  <button
-                    onClick={() =>
-                      addItem({
-                        id: product.id,
-                        name: product.name,
-                        price: product.price,
-                        image: product.image,
-                      })
-                    }
-                    className="btn-primary w-full text-center text-sm"
-                  >
-                    Ajouter au panier
-                  </button>
-                </div>
-              </motion.div>
-            ))}
+                    <button
+                      disabled={outOfStock}
+                      onClick={() =>
+                        addItem({
+                          id: product.id,
+                          name: product.name,
+                          price: product.price,
+                          image: product.image,
+                        })
+                      }
+                      className="btn-primary w-full text-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {outOfStock ? 'Sold Out' : 'Ajouter au panier'}
+                    </button>
+                  </div>
+                </motion.div>
+              )
+            })}
           </motion.div>
         )}
       </div>

@@ -2,21 +2,68 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
 import {
   createProduct,
   deleteProduct,
+  updateProduct,
   getAllOrders,
   getAllUsers,
   getProducts,
   updateOrderStatus,
+  setUserAdmin,
+  getPromoCodes,
+  createPromoCode,
+  updatePromoCode,
+  deletePromoCode,
   type Order,
   type Product,
   type UserProfile,
+  type PromoCode,
 } from '@/lib/firestore'
 
 const STATUS_OPTIONS: Order['status'][] = ['pending', 'paid', 'shipped', 'delivered']
+const STATUS_LABELS: Record<Order['status'], { label: string; color: string }> = {
+  pending: { label: 'En attente', color: 'text-yellow-400 bg-yellow-400/10' },
+  paid: { label: 'Payee', color: 'text-green-400 bg-green-400/10' },
+  shipped: { label: 'Expediee', color: 'text-blue-400 bg-blue-400/10' },
+  delivered: { label: 'Livree', color: 'text-gray-400 bg-gray-400/10' },
+}
+
+type Tab = 'dashboard' | 'products' | 'orders' | 'users' | 'promos'
+
+type ProductForm = {
+  name: string
+  price: string
+  description: string
+  image: string
+  category: string
+  stock: string
+}
+
+const EMPTY_PRODUCT: ProductForm = {
+  name: '',
+  price: '',
+  description: '',
+  image: '',
+  category: 'general',
+  stock: '0',
+}
+
+type PromoForm = {
+  code: string
+  discount: string
+  usageLimit: string
+  active: boolean
+}
+
+const EMPTY_PROMO: PromoForm = {
+  code: '',
+  discount: '',
+  usageLimit: '0',
+  active: true,
+}
 
 export default function AdminPage() {
   const { user, profile, loading: authLoading } = useAuth()
@@ -25,18 +72,28 @@ export default function AdminPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [users, setUsers] = useState<UserProfile[]>([])
+  const [promoCodes, setPromoCodes] = useState<PromoCode[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
-  const [newProduct, setNewProduct] = useState({
-    name: '',
-    price: '',
-    description: '',
-    image: '',
-    category: 'general',
-  })
+  const [activeTab, setActiveTab] = useState<Tab>('dashboard')
+  const [productForm, setProductForm] = useState<ProductForm>(EMPTY_PRODUCT)
+  const [editingProductId, setEditingProductId] = useState<string | null>(null)
+  const [promoForm, setPromoForm] = useState<PromoForm>(EMPTY_PROMO)
+  const [editingPromoId, setEditingPromoId] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [searchProduct, setSearchProduct] = useState('')
+  const [searchOrder, setSearchOrder] = useState('')
+  const [filterStatus, setFilterStatus] = useState<Order['status'] | 'all'>('all')
 
   const isAdmin = Boolean(profile?.isAdmin)
+
+  useEffect(() => {
+    if (!error && !success) return
+    const t = setTimeout(() => { setError(''); setSuccess('') }, 4000)
+    return () => clearTimeout(t)
+  }, [error, success])
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -49,60 +106,144 @@ export default function AdminPage() {
       return
     }
 
-    Promise.all([getProducts(), getAllOrders(), getAllUsers()])
-      .then(([productsData, ordersData, usersData]) => {
-        setProducts(productsData)
-        setOrders(ordersData)
-        setUsers(usersData)
+    Promise.all([getProducts(), getAllOrders(), getAllUsers(), getPromoCodes()])
+      .then(([p, o, u, pc]) => {
+        setProducts(p)
+        setOrders(o)
+        setUsers(u)
+        setPromoCodes(pc)
       })
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : 'Erreur admin')
+        setError(err instanceof Error ? err.message : 'Erreur chargement')
       })
       .finally(() => setLoading(false))
   }, [authLoading, user, isAdmin, router])
 
-  const orderStats = useMemo(() => {
-    const totals = { pending: 0, paid: 0, shipped: 0, delivered: 0 }
-    for (const order of orders) {
-      totals[order.status] += 1
-    }
-    return totals
-  }, [orders])
+  /* ─── Stats ─── */
 
-  const handleCreateProduct = async (e: React.FormEvent) => {
+  const stats = useMemo(() => {
+    const ordersByStatus = { pending: 0, paid: 0, shipped: 0, delivered: 0 }
+    let totalRevenue = 0
+    let todayRevenue = 0
+    let todayOrders = 0
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    for (const order of orders) {
+      ordersByStatus[order.status] += 1
+      if (order.status !== 'pending') {
+        totalRevenue += order.total
+      }
+      if (order.createdAt >= today) {
+        todayOrders += 1
+        if (order.status !== 'pending') todayRevenue += order.total
+      }
+    }
+
+    const totalStock = products.reduce((sum, p) => sum + p.stock, 0)
+    const outOfStock = products.filter((p) => p.stock <= 0).length
+
+    return {
+      ordersByStatus,
+      totalRevenue,
+      todayRevenue,
+      todayOrders,
+      totalProducts: products.length,
+      totalStock,
+      outOfStock,
+      totalUsers: users.length,
+      totalOrders: orders.length,
+      activePromos: promoCodes.filter((p) => p.active).length,
+    }
+  }, [orders, products, users, promoCodes])
+
+  /* ─── Filtered data ─── */
+
+  const filteredProducts = useMemo(() => {
+    if (!searchProduct.trim()) return products
+    const q = searchProduct.toLowerCase()
+    return products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q)
+    )
+  }, [products, searchProduct])
+
+  const filteredOrders = useMemo(() => {
+    let result = orders
+    if (filterStatus !== 'all') {
+      result = result.filter((o) => o.status === filterStatus)
+    }
+    if (searchOrder.trim()) {
+      const q = searchOrder.toLowerCase()
+      result = result.filter(
+        (o) =>
+          o.id.toLowerCase().includes(q) ||
+          o.uid.toLowerCase().includes(q) ||
+          o.paymentId?.toLowerCase().includes(q)
+      )
+    }
+    return result
+  }, [orders, filterStatus, searchOrder])
+
+  /* ─── Product CRUD ─── */
+
+  const resetProductForm = () => {
+    setProductForm(EMPTY_PRODUCT)
+    setEditingProductId(null)
+  }
+
+  const startEditProduct = (p: Product) => {
+    setProductForm({
+      name: p.name,
+      price: String(p.price),
+      description: p.description,
+      image: p.image,
+      category: p.category,
+      stock: String(p.stock ?? 0),
+    })
+    setEditingProductId(p.id)
+    setActiveTab('products')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setSuccess('')
 
-    const price = Number(newProduct.price)
-    if (!newProduct.name || Number.isNaN(price)) {
-      setError('Nom et prix requis.')
-      return
+    const price = Number(productForm.price)
+    const stock = Number(productForm.stock)
+    if (!productForm.name.trim()) { setError('Nom requis.'); return }
+    if (Number.isNaN(price) || price < 0) { setError('Prix invalide.'); return }
+    if (Number.isNaN(stock) || stock < 0) { setError('Stock invalide.'); return }
+
+    setSaving(true)
+    const data = {
+      name: productForm.name.trim(),
+      price,
+      description: productForm.description.trim(),
+      image: productForm.image.trim(),
+      category: productForm.category.trim() || 'general',
+      stock: Math.floor(stock),
     }
 
     try {
-      const id = await createProduct({
-        name: newProduct.name.trim(),
-        price,
-        description: newProduct.description.trim(),
-        image: newProduct.image.trim(),
-        category: newProduct.category.trim() || 'general',
-      })
-
-      setProducts((prev) => [
-        {
-          id,
-          name: newProduct.name.trim(),
-          price,
-          description: newProduct.description.trim(),
-          image: newProduct.image.trim(),
-          category: newProduct.category.trim() || 'general',
-        },
-        ...prev,
-      ])
-
-      setNewProduct({ name: '', price: '', description: '', image: '', category: 'general' })
+      if (editingProductId) {
+        await updateProduct(editingProductId, data)
+        setProducts((prev) => prev.map((p) => (p.id === editingProductId ? { ...p, ...data } : p)))
+        setSuccess(`"${data.name}" mis a jour.`)
+      } else {
+        const id = await createProduct(data)
+        setProducts((prev) => [{ id, ...data }, ...prev])
+        setSuccess(`"${data.name}" cree.`)
+      }
+      resetProductForm()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur création produit')
+      setError(err instanceof Error ? err.message : 'Erreur produit')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -111,19 +252,113 @@ export default function AdminPage() {
     try {
       await deleteProduct(id)
       setProducts((prev) => prev.filter((p) => p.id !== id))
+      if (editingProductId === id) resetProductForm()
+      setSuccess('Produit supprime.')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur suppression produit')
+      setError(err instanceof Error ? err.message : 'Erreur suppression')
     }
   }
+
+  /* ─── Order status ─── */
 
   const handleStatusChange = async (orderId: string, status: Order['status']) => {
     try {
       await updateOrderStatus(orderId, status)
       setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)))
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur mise à jour commande')
+      setError(err instanceof Error ? err.message : 'Erreur commande')
     }
   }
+
+  /* ─── User admin toggle ─── */
+
+  const handleToggleAdmin = async (uid: string, current: boolean) => {
+    const action = current ? 'retirer les droits admin' : 'donner les droits admin'
+    if (!confirm(`Voulez-vous ${action} a cet utilisateur ?`)) return
+    try {
+      await setUserAdmin(uid, !current)
+      setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, isAdmin: !current } : u)))
+      setSuccess(`Droits mis a jour.`)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur modification role')
+    }
+  }
+
+  /* ─── Promo CRUD ─── */
+
+  const resetPromoForm = () => {
+    setPromoForm(EMPTY_PROMO)
+    setEditingPromoId(null)
+  }
+
+  const startEditPromo = (p: PromoCode) => {
+    setPromoForm({
+      code: p.code,
+      discount: String(p.discount),
+      usageLimit: String(p.usageLimit),
+      active: p.active,
+    })
+    setEditingPromoId(p.id)
+  }
+
+  const handlePromoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setSuccess('')
+
+    const discount = Number(promoForm.discount)
+    const usageLimit = Number(promoForm.usageLimit)
+    if (!promoForm.code.trim()) { setError('Code requis.'); return }
+    if (Number.isNaN(discount) || discount <= 0 || discount > 100) { setError('Reduction entre 1 et 100%.'); return }
+
+    setSaving(true)
+    const data = {
+      code: promoForm.code.trim().toUpperCase(),
+      discount,
+      usageLimit: Math.floor(usageLimit) || 0,
+      active: promoForm.active,
+    }
+
+    try {
+      if (editingPromoId) {
+        await updatePromoCode(editingPromoId, data)
+        setPromoCodes((prev) => prev.map((p) => (p.id === editingPromoId ? { ...p, ...data } : p)))
+        setSuccess(`Code "${data.code}" mis a jour.`)
+      } else {
+        const id = await createPromoCode(data)
+        setPromoCodes((prev) => [{ id, ...data, usageCount: 0, createdAt: new Date() }, ...prev])
+        setSuccess(`Code "${data.code}" cree.`)
+      }
+      resetPromoForm()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur promo')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeletePromo = async (id: string) => {
+    if (!confirm('Supprimer ce code promo ?')) return
+    try {
+      await deletePromoCode(id)
+      setPromoCodes((prev) => prev.filter((p) => p.id !== id))
+      if (editingPromoId === id) resetPromoForm()
+      setSuccess('Code promo supprime.')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur suppression promo')
+    }
+  }
+
+  const handleTogglePromoActive = async (id: string, current: boolean) => {
+    try {
+      await updatePromoCode(id, { active: !current })
+      setPromoCodes((prev) => prev.map((p) => (p.id === id ? { ...p, active: !current } : p)))
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur promo')
+    }
+  }
+
+  /* ─── Guards ─── */
 
   if (authLoading || loading) {
     return (
@@ -139,143 +374,447 @@ export default function AdminPage() {
     return (
       <div className="min-h-screen pt-24 pb-16 px-6 flex items-center justify-center">
         <div className="card p-8 text-center max-w-md">
-          <h1 className="text-2xl font-bold mb-3">Accès refusé</h1>
-          <p className="text-gray-500">Vous n'avez pas les droits admin.</p>
+          <h1 className="text-2xl font-bold mb-3">Acces refuse</h1>
+          <p className="text-gray-500">Vous n&apos;avez pas les droits administrateur.</p>
         </div>
       </div>
     )
   }
 
+  const tabs: { key: Tab; label: string }[] = [
+    { key: 'dashboard', label: 'Dashboard' },
+    { key: 'products', label: `Produits (${products.length})` },
+    { key: 'orders', label: `Commandes (${orders.length})` },
+    { key: 'users', label: `Utilisateurs (${users.length})` },
+    { key: 'promos', label: `Promos (${promoCodes.length})` },
+  ]
+
   return (
     <div className="min-h-screen pt-24 pb-16 px-6">
-      <div className="max-w-6xl mx-auto flex flex-col gap-10">
+      <div className="max-w-6xl mx-auto flex flex-col gap-8">
+        {/* Header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-3xl font-bold">Espace Admin</h1>
-          <p className="text-gray-500">Gérez produits, commandes et utilisateurs.</p>
+          <h1 className="text-3xl font-bold">Espace <span className="text-gold">Admin</span></h1>
+          <p className="text-gray-500 mt-1">Gerez votre boutique en ligne.</p>
         </motion.div>
 
-        {error && (
-          <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-            {error}
-          </div>
-        )}
+        {/* Messages */}
+        <AnimatePresence>
+          {error && (
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+              className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              {error}
+            </motion.div>
+          )}
+          {success && (
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+              className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm">
+              {success}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {STATUS_OPTIONS.map((status) => (
-            <div key={status} className="card p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wide">{status}</p>
-              <p className="text-2xl font-bold text-gold">{orderStats[status]}</p>
-            </div>
+        {/* Tabs */}
+        <div className="flex gap-1 overflow-x-auto border-b border-white/10 pb-0">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-[1px] whitespace-nowrap ${
+                activeTab === tab.key
+                  ? 'border-gold text-gold'
+                  : 'border-transparent text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              {tab.label}
+            </button>
           ))}
         </div>
 
-        <section className="card p-6">
-          <h2 className="text-xl font-semibold mb-4">Créer un produit</h2>
-          <form onSubmit={handleCreateProduct} className="grid gap-4 md:grid-cols-2">
-            <input
-              className="input-field"
-              placeholder="Nom"
-              value={newProduct.name}
-              onChange={(e) => setNewProduct((p) => ({ ...p, name: e.target.value }))}
-            />
-            <input
-              className="input-field"
-              placeholder="Prix"
-              type="number"
-              step="0.01"
-              value={newProduct.price}
-              onChange={(e) => setNewProduct((p) => ({ ...p, price: e.target.value }))}
-            />
-            <input
-              className="input-field"
-              placeholder="Image URL"
-              value={newProduct.image}
-              onChange={(e) => setNewProduct((p) => ({ ...p, image: e.target.value }))}
-            />
-            <input
-              className="input-field"
-              placeholder="Catégorie"
-              value={newProduct.category}
-              onChange={(e) => setNewProduct((p) => ({ ...p, category: e.target.value }))}
-            />
-            <textarea
-              className="input-field md:col-span-2"
-              placeholder="Description"
-              value={newProduct.description}
-              onChange={(e) => setNewProduct((p) => ({ ...p, description: e.target.value }))}
-              rows={3}
-            />
-            <button type="submit" className="btn-primary md:col-span-2">
-              Ajouter le produit
-            </button>
-          </form>
-        </section>
+        {/* ═══════ DASHBOARD ═══════ */}
+        {activeTab === 'dashboard' && (
+          <motion.div key="dashboard" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-6">
+            {/* Stats principales */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="card p-5">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Revenu total</p>
+                <p className="text-2xl font-bold text-gold mt-1">{stats.totalRevenue.toFixed(2)} &euro;</p>
+              </div>
+              <div className="card p-5">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Revenu aujourd&apos;hui</p>
+                <p className="text-2xl font-bold text-gold mt-1">{stats.todayRevenue.toFixed(2)} &euro;</p>
+              </div>
+              <div className="card p-5">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Commandes du jour</p>
+                <p className="text-2xl font-bold text-gold mt-1">{stats.todayOrders}</p>
+              </div>
+              <div className="card p-5">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Utilisateurs</p>
+                <p className="text-2xl font-bold text-gold mt-1">{stats.totalUsers}</p>
+              </div>
+            </div>
 
-        <section className="card p-6">
-          <h2 className="text-xl font-semibold mb-4">Produits ({products.length})</h2>
-          <div className="flex flex-col gap-4">
-            {products.map((product) => (
-              <div key={product.id} className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-white/5 pb-4">
-                <div>
-                  <p className="font-semibold">{product.name}</p>
-                  <p className="text-sm text-gray-500">{product.price.toFixed(2)} € · {product.category || 'general'}</p>
+            {/* Stats commandes */}
+            <div className="card p-6">
+              <h2 className="text-lg font-semibold mb-4">Commandes par statut</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {STATUS_OPTIONS.map((status) => (
+                  <div key={status} className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${STATUS_LABELS[status].color}`}>
+                      {STATUS_LABELS[status].label}
+                    </span>
+                    <span className="text-lg font-bold">{stats.ordersByStatus[status]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Stats produits */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="card p-5">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Produits en catalogue</p>
+                <p className="text-2xl font-bold text-gold mt-1">{stats.totalProducts}</p>
+              </div>
+              <div className="card p-5">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Stock total</p>
+                <p className="text-2xl font-bold text-gold mt-1">{stats.totalStock}</p>
+              </div>
+              <div className="card p-5">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">En rupture</p>
+                <p className={`text-2xl font-bold mt-1 ${stats.outOfStock > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                  {stats.outOfStock}
+                </p>
+              </div>
+            </div>
+
+            {/* Codes promo actifs */}
+            <div className="card p-5">
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Codes promo actifs</p>
+              <p className="text-2xl font-bold text-gold mt-1">{stats.activePromos}</p>
+            </div>
+
+            {/* Dernières commandes */}
+            {orders.length > 0 && (
+              <div className="card p-6">
+                <h2 className="text-lg font-semibold mb-4">Dernieres commandes</h2>
+                <div className="flex flex-col gap-3">
+                  {orders.slice(0, 5).map((order) => (
+                    <div key={order.id} className="flex items-center justify-between text-sm border-b border-white/5 pb-2">
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-gray-500">#{order.id.slice(0, 8)}</span>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_LABELS[order.status].color}`}>
+                          {STATUS_LABELS[order.status].label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="text-gold font-semibold">{order.total.toFixed(2)} &euro;</span>
+                        <span className="text-xs text-gray-600">{order.createdAt.toLocaleDateString('fr-FR')}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <button onClick={() => handleDeleteProduct(product.id)} className="btn-outline">
-                  Supprimer
+                <button onClick={() => setActiveTab('orders')} className="text-sm text-gold hover:text-gold-light mt-3 transition-colors">
+                  Voir toutes les commandes &rarr;
                 </button>
               </div>
-            ))}
-          </div>
-        </section>
+            )}
+          </motion.div>
+        )}
 
-        <section className="card p-6">
-          <h2 className="text-xl font-semibold mb-4">Commandes ({orders.length})</h2>
-          <div className="flex flex-col gap-4">
-            {orders.map((order) => (
-              <div key={order.id} className="border-b border-white/5 pb-4">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                  <div>
-                    <p className="text-sm text-gray-500">#{order.id.slice(0, 8)}</p>
-                    <p className="text-sm text-gray-400">{order.uid}</p>
-                    <p className="text-sm text-gray-500">{order.paymentMethod || 'n/a'} · {order.paymentId || 'n/a'}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-gold font-semibold">{order.total.toFixed(2)} €</span>
-                    <select
-                      className="input-field"
-                      value={order.status}
-                      onChange={(e) => handleStatusChange(order.id, e.target.value as Order['status'])}
-                    >
-                      {STATUS_OPTIONS.map((status) => (
-                        <option key={status} value={status}>{status}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="mt-2 text-xs text-gray-500">
-                  {order.createdAt.toLocaleString('fr-FR')}
-                </div>
+        {/* ═══════ PRODUITS ═══════ */}
+        {activeTab === 'products' && (
+          <motion.div key="products" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-8">
+            {/* Formulaire */}
+            <section className="card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">{editingProductId ? 'Modifier le produit' : 'Creer un produit'}</h2>
+                {editingProductId && (
+                  <button onClick={resetProductForm} className="text-sm text-gray-500 hover:text-white transition-colors">Annuler</button>
+                )}
               </div>
-            ))}
-          </div>
-        </section>
+              <form onSubmit={handleProductSubmit} className="grid gap-4 md:grid-cols-2">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">Nom *</label>
+                  <input className="input-field" placeholder="Nom du produit" value={productForm.name}
+                    onChange={(e) => setProductForm((f) => ({ ...f, name: e.target.value }))} required />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">Prix (EUR) *</label>
+                  <input className="input-field" placeholder="0.00" type="number" step="0.01" min="0"
+                    value={productForm.price} onChange={(e) => setProductForm((f) => ({ ...f, price: e.target.value }))} required />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">Image URL</label>
+                  <input className="input-field" placeholder="https://..." value={productForm.image}
+                    onChange={(e) => setProductForm((f) => ({ ...f, image: e.target.value }))} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">Categorie</label>
+                  <input className="input-field" placeholder="general" value={productForm.category}
+                    onChange={(e) => setProductForm((f) => ({ ...f, category: e.target.value }))} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">Stock</label>
+                  <input className="input-field" placeholder="0" type="number" min="0" value={productForm.stock}
+                    onChange={(e) => setProductForm((f) => ({ ...f, stock: e.target.value }))} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">Apercu</label>
+                  <div className="input-field h-[42px] flex items-center overflow-hidden">
+                    {productForm.image ? (
+                      <img src={productForm.image} alt="Apercu" className="h-8 w-8 object-cover rounded"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                    ) : (
+                      <span className="text-gray-600 text-sm">Aucune image</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1 md:col-span-2">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">Description</label>
+                  <textarea className="input-field" placeholder="Description du produit..." value={productForm.description}
+                    onChange={(e) => setProductForm((f) => ({ ...f, description: e.target.value }))} rows={3} />
+                </div>
+                <button type="submit" disabled={saving} className="btn-primary md:col-span-2 disabled:opacity-50">
+                  {saving ? 'Sauvegarde...' : editingProductId ? 'Mettre a jour' : 'Ajouter le produit'}
+                </button>
+              </form>
+            </section>
 
-        <section className="card p-6">
-          <h2 className="text-xl font-semibold mb-4">Utilisateurs ({users.length})</h2>
-          <div className="flex flex-col gap-3">
-            {users.map((u) => (
-              <div key={u.uid} className="flex items-center justify-between border-b border-white/5 pb-3">
-                <div>
-                  <p className="text-sm text-gray-200">{u.email || u.uid}</p>
-                  <p className="text-xs text-gray-500">{u.uid}</p>
+            {/* Recherche */}
+            <div className="flex gap-3">
+              <input className="input-field flex-1" placeholder="Rechercher un produit..." value={searchProduct}
+                onChange={(e) => setSearchProduct(e.target.value)} />
+            </div>
+
+            {/* Liste */}
+            <section className="card p-6">
+              <h2 className="text-xl font-semibold mb-4">Tous les produits ({filteredProducts.length})</h2>
+              {filteredProducts.length === 0 ? (
+                <p className="text-gray-500 text-sm py-8 text-center">Aucun produit trouve.</p>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {filteredProducts.map((product) => (
+                    <div key={product.id}
+                      className={`flex flex-col md:flex-row md:items-center gap-4 border-b border-white/5 pb-4 ${
+                        editingProductId === product.id ? 'ring-1 ring-gold/30 rounded-lg p-3 -m-3 bg-gold/5' : ''
+                      }`}>
+                      <div className="w-14 h-14 bg-dark-tertiary rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+                        {product.image ? (
+                          <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-xl text-gray-700">&#9670;</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold">{product.name}</p>
+                        <p className="text-sm text-gray-500 truncate">{product.description || 'Pas de description'}</p>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          <span className="text-gold font-semibold text-sm">{product.price.toFixed(2)} &euro;</span>
+                          <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded">{product.category}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded ${product.stock > 0 ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'}`}>
+                            Stock: {product.stock}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <button onClick={() => startEditProduct(product)} className="btn-outline text-sm px-3">Modifier</button>
+                        <button onClick={() => handleDeleteProduct(product.id)}
+                          className="text-sm px-3 py-2 rounded-lg border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-colors">
+                          Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <span className={	ext-xs font-semibold px-3 py-1 rounded-full }>
-                  {u.isAdmin ? 'Admin' : 'Client'}
-                </span>
+              )}
+            </section>
+          </motion.div>
+        )}
+
+        {/* ═══════ COMMANDES ═══════ */}
+        {activeTab === 'orders' && (
+          <motion.div key="orders" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-6">
+            {/* Filtres */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <input className="input-field flex-1" placeholder="Rechercher (ID, UID, paiement)..."
+                value={searchOrder} onChange={(e) => setSearchOrder(e.target.value)} />
+              <select className="input-field w-auto" value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value as Order['status'] | 'all')}>
+                <option value="all">Tous les statuts</option>
+                {STATUS_OPTIONS.map((s) => (
+                  <option key={s} value={s}>{STATUS_LABELS[s].label}</option>
+                ))}
+              </select>
+            </div>
+
+            <section className="card p-6">
+              <h2 className="text-xl font-semibold mb-4">Commandes ({filteredOrders.length})</h2>
+              {filteredOrders.length === 0 ? (
+                <p className="text-gray-500 text-sm py-8 text-center">Aucune commande trouvee.</p>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {filteredOrders.map((order) => (
+                    <div key={order.id} className="border-b border-white/5 pb-4">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-mono text-gray-400">#{order.id.slice(0, 8)}</span>
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_LABELS[order.status].color}`}>
+                              {STATUS_LABELS[order.status].label}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">{order.uid}</p>
+                          <p className="text-xs text-gray-600">{order.paymentMethod || 'n/a'} &middot; {order.paymentId || 'n/a'}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-gold font-semibold">{order.total.toFixed(2)} &euro;</span>
+                          <select className="input-field text-sm" value={order.status}
+                            onChange={(e) => handleStatusChange(order.id, e.target.value as Order['status'])}>
+                            {STATUS_OPTIONS.map((s) => (
+                              <option key={s} value={s}>{STATUS_LABELS[s].label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <div className="mt-2 ml-4 text-xs text-gray-500 flex flex-col gap-0.5">
+                        {order.items.map((item) => (
+                          <span key={item.id}>{item.name} x{item.quantity} &mdash; {(item.price * item.quantity).toFixed(2)} &euro;</span>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-xs text-gray-600">{order.createdAt.toLocaleString('fr-FR')}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </motion.div>
+        )}
+
+        {/* ═══════ UTILISATEURS ═══════ */}
+        {activeTab === 'users' && (
+          <motion.div key="users" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+            <section className="card p-6">
+              <h2 className="text-xl font-semibold mb-4">Utilisateurs ({users.length})</h2>
+              {users.length === 0 ? (
+                <p className="text-gray-500 text-sm py-8 text-center">Aucun utilisateur.</p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {users.map((u) => (
+                    <div key={u.uid} className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/5 pb-3 gap-2">
+                      <div>
+                        <p className="text-sm text-gray-200">{u.email || u.uid}</p>
+                        <p className="text-xs text-gray-500 font-mono">{u.uid}</p>
+                        <p className="text-xs text-gray-600">Inscrit le {u.createdAt.toLocaleDateString('fr-FR')}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs font-semibold px-3 py-1 rounded-full ${u.isAdmin ? 'bg-gold/20 text-gold' : 'bg-gray-500/20 text-gray-400'}`}>
+                          {u.isAdmin ? 'Admin' : 'Client'}
+                        </span>
+                        {u.uid !== user?.uid && (
+                          <button
+                            onClick={() => handleToggleAdmin(u.uid, u.isAdmin)}
+                            className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+                              u.isAdmin
+                                ? 'border border-red-500/20 text-red-400 hover:bg-red-500/10'
+                                : 'border border-gold/20 text-gold hover:bg-gold/10'
+                            }`}
+                          >
+                            {u.isAdmin ? 'Retirer admin' : 'Rendre admin'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </motion.div>
+        )}
+
+        {/* ═══════ PROMOS ═══════ */}
+        {activeTab === 'promos' && (
+          <motion.div key="promos" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-8">
+            {/* Formulaire */}
+            <section className="card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">{editingPromoId ? 'Modifier le code' : 'Creer un code promo'}</h2>
+                {editingPromoId && (
+                  <button onClick={resetPromoForm} className="text-sm text-gray-500 hover:text-white transition-colors">Annuler</button>
+                )}
               </div>
-            ))}
-          </div>
-        </section>
+              <form onSubmit={handlePromoSubmit} className="grid gap-4 md:grid-cols-2">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">Code *</label>
+                  <input className="input-field uppercase" placeholder="PROMO20" value={promoForm.code}
+                    onChange={(e) => setPromoForm((f) => ({ ...f, code: e.target.value }))} required />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">Reduction (%) *</label>
+                  <input className="input-field" placeholder="10" type="number" min="1" max="100" value={promoForm.discount}
+                    onChange={(e) => setPromoForm((f) => ({ ...f, discount: e.target.value }))} required />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">Limite d&apos;utilisation (0 = illimite)</label>
+                  <input className="input-field" placeholder="0" type="number" min="0" value={promoForm.usageLimit}
+                    onChange={(e) => setPromoForm((f) => ({ ...f, usageLimit: e.target.value }))} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">Statut</label>
+                  <div className="input-field h-[42px] flex items-center">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={promoForm.active}
+                        onChange={(e) => setPromoForm((f) => ({ ...f, active: e.target.checked }))}
+                        className="w-4 h-4 rounded border-gray-600 text-gold focus:ring-gold bg-dark-tertiary" />
+                      <span className="text-sm">{promoForm.active ? 'Actif' : 'Inactif'}</span>
+                    </label>
+                  </div>
+                </div>
+                <button type="submit" disabled={saving} className="btn-primary md:col-span-2 disabled:opacity-50">
+                  {saving ? 'Sauvegarde...' : editingPromoId ? 'Mettre a jour' : 'Creer le code promo'}
+                </button>
+              </form>
+            </section>
+
+            {/* Liste */}
+            <section className="card p-6">
+              <h2 className="text-xl font-semibold mb-4">Codes promo ({promoCodes.length})</h2>
+              {promoCodes.length === 0 ? (
+                <p className="text-gray-500 text-sm py-8 text-center">Aucun code promo.</p>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {promoCodes.map((promo) => (
+                    <div key={promo.id} className={`flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/5 pb-4 gap-3 ${
+                      editingPromoId === promo.id ? 'ring-1 ring-gold/30 rounded-lg p-3 -m-3 bg-gold/5' : ''
+                    }`}>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-gold">{promo.code}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${promo.active ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'}`}>
+                            {promo.active ? 'Actif' : 'Inactif'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-1">
+                          -{promo.discount}% &middot; {promo.usageCount}/{promo.usageLimit || '&infin;'} utilisations
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => handleTogglePromoActive(promo.id, promo.active)}
+                          className="btn-outline text-sm px-3">
+                          {promo.active ? 'Desactiver' : 'Activer'}
+                        </button>
+                        <button onClick={() => startEditPromo(promo)} className="btn-outline text-sm px-3">Modifier</button>
+                        <button onClick={() => handleDeletePromo(promo.id)}
+                          className="text-sm px-3 py-2 rounded-lg border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-colors">
+                          Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </motion.div>
+        )}
       </div>
     </div>
   )
