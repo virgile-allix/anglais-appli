@@ -75,7 +75,7 @@ export default function CreateFigurinePage() {
       }
 
       // Rediriger vers la page de la figurine
-      router.push(`/my-figurines/${figurineId}`)
+      router.push(`/my-figurines/view?id=${figurineId}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue')
       setLoading(false)
@@ -157,11 +157,10 @@ export default function CreateFigurinePage() {
                     key={s.id}
                     type="button"
                     onClick={() => setStyle(s.id)}
-                    className={`p-4 rounded-xl border text-left transition-all ${
-                      style === s.id
+                    className={`p-4 rounded-xl border text-left transition-all ${style === s.id
                         ? 'border-gold bg-gold/10 text-white'
                         : 'border-white/10 text-gray-400 hover:border-white/20 hover:text-white'
-                    }`}
+                      }`}
                   >
                     <p className="font-semibold text-sm">{s.name}</p>
                     <p className="text-xs mt-1 opacity-70">{s.description}</p>
