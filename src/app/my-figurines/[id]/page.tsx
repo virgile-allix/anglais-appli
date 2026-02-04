@@ -58,16 +58,18 @@ export default function FigurineDetailPage() {
       }>(`/meshy/status/${figurine.meshyTaskId}`)
 
       if (data.status === 'SUCCEEDED' && data.modelUrl) {
+        const modelUrl = data.modelUrl || ''
+        const thumbnailUrl = data.thumbnailUrl || ''
         await updateFigurine(figurine.id, {
           status: 'ready',
-          modelUrl: data.modelUrl,
-          thumbnailUrl: data.thumbnailUrl || '',
+          modelUrl,
+          thumbnailUrl,
         })
         setFigurine((prev) => prev ? {
           ...prev,
           status: 'ready',
-          modelUrl: data.modelUrl,
-          thumbnailUrl: data.thumbnailUrl || '',
+          modelUrl,
+          thumbnailUrl,
         } : null)
         setPollingActive(false)
       } else if (data.status === 'FAILED') {
