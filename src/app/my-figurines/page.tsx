@@ -87,7 +87,7 @@ export default function MyFigurinesPage() {
                 return (
                   <Link
                     key={figurine.id}
-                    href={`/my-figurines/${figurine.id}`}
+                    href={`/my-figurines/view?id=${figurine.id}`}
                     className="card group hover:border-gold/30 transition-all"
                   >
                     {/* Thumbnail / Placeholder */}

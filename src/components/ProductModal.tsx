@@ -89,21 +89,19 @@ export default function ProductModal({ product, onClose }: Props) {
                 <div className="flex gap-2 mb-4">
                   <button
                     onClick={() => setActiveTab('image')}
-                    className={`text-sm px-4 py-2 rounded-lg transition-colors ${
-                      activeTab === 'image'
+                    className={`text-sm px-4 py-2 rounded-lg transition-colors ${activeTab === 'image'
                         ? 'bg-gold text-dark font-semibold'
                         : 'bg-dark text-gray-400 hover:text-white'
-                    }`}
+                      }`}
                   >
                     Image
                   </button>
                   <button
                     onClick={() => setActiveTab('3d')}
-                    className={`text-sm px-4 py-2 rounded-lg transition-colors ${
-                      activeTab === '3d'
+                    className={`text-sm px-4 py-2 rounded-lg transition-colors ${activeTab === '3d'
                         ? 'bg-gold text-dark font-semibold'
                         : 'bg-dark text-gray-400 hover:text-white'
-                    }`}
+                      }`}
                   >
                     Vue 3D
                   </button>
@@ -205,7 +203,7 @@ export default function ProductModal({ product, onClose }: Props) {
 
               {/* Link to full page */}
               <Link
-                href={`/product/${product.id}`}
+                href={`/product/view?id=${product.id}`}
                 onClick={onClose}
                 className="text-sm text-gray-500 hover:text-gold transition-colors mt-4 text-center"
               >
