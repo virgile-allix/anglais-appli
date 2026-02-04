@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
 import { useCart, type CartItem } from '@/context/CartContext'
-import { createOrder, incrementPromoUsage, decrementStock } from '@/lib/firestore'
+import { createOrder, incrementPromoUsage, decrementStock, type Address } from '@/lib/firestore'
 import { apiFetch } from '@/lib/api'
 
 export default function CheckoutSuccessClient() {
@@ -39,13 +39,19 @@ export default function CheckoutSuccessClient() {
           token,
         })
 
-        // Recuperer les items stockes avant le redirect
+        // Recuperer les items et l'adresse stockes avant le redirect
         let checkoutItems: CartItem[] = []
+        let shippingAddress: Address | undefined
         try {
           const stored = localStorage.getItem('ps-checkout-items')
           if (stored) {
             checkoutItems = JSON.parse(stored)
             localStorage.removeItem('ps-checkout-items')
+          }
+          const storedAddress = localStorage.getItem('ps-shipping-address')
+          if (storedAddress) {
+            shippingAddress = JSON.parse(storedAddress)
+            localStorage.removeItem('ps-shipping-address')
           }
         } catch {}
 
@@ -69,7 +75,7 @@ export default function CheckoutSuccessClient() {
         // Calculer le total final (montant Stripe en centimes -> euros)
         const paidTotal = result.amountTotal ? result.amountTotal / 100 : checkoutItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
 
-        // Save order in Firestore
+        // Save order in Firestore avec adresse de livraison
         await createOrder({
           uid: user.uid,
           items: checkoutItems.map((i) => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
@@ -77,6 +83,7 @@ export default function CheckoutSuccessClient() {
           status: 'paid',
           paymentId: sessionId,
           paymentMethod: 'stripe',
+          shippingAddress,
         })
 
         // Decrementer le stock de chaque produit

@@ -51,6 +51,7 @@ type ProductForm = {
   image: string
   category: string
   stock: string
+  model3d: string
 }
 
 const EMPTY_PRODUCT: ProductForm = {
@@ -60,6 +61,7 @@ const EMPTY_PRODUCT: ProductForm = {
   image: '',
   category: 'general',
   stock: '0',
+  model3d: '',
 }
 
 type PromoForm = {
@@ -221,6 +223,7 @@ export default function AdminPage() {
       image: p.image,
       category: p.category,
       stock: String(p.stock ?? 0),
+      model3d: p.model3d || '',
     })
     setEditingProductId(p.id)
     setActiveTab('products')
@@ -246,6 +249,7 @@ export default function AdminPage() {
       image: productForm.image.trim(),
       category: productForm.category.trim() || 'general',
       stock: Math.floor(stock),
+      model3d: productForm.model3d.trim(),
     }
 
     try {
@@ -635,13 +639,21 @@ export default function AdminPage() {
                     onChange={(e) => setProductForm((f) => ({ ...f, stock: e.target.value }))} />
                 </div>
                 <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">Modele 3D (GLB URL)</label>
+                  <input className="input-field" placeholder="https://...model.glb" value={productForm.model3d}
+                    onChange={(e) => setProductForm((f) => ({ ...f, model3d: e.target.value }))} />
+                </div>
+                <div className="flex flex-col gap-1">
                   <label className="text-xs text-gray-500 uppercase tracking-wide">Apercu</label>
-                  <div className="input-field h-[42px] flex items-center overflow-hidden">
+                  <div className="input-field h-[42px] flex items-center gap-3 overflow-hidden">
                     {productForm.image ? (
                       <img src={productForm.image} alt="Apercu" className="h-8 w-8 object-cover rounded"
                         onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                     ) : (
                       <span className="text-gray-600 text-sm">Aucune image</span>
+                    )}
+                    {productForm.model3d && (
+                      <span className="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded">3D</span>
                     )}
                   </div>
                 </div>
@@ -690,6 +702,9 @@ export default function AdminPage() {
                           <span className={`text-xs px-2 py-0.5 rounded ${product.stock > 0 ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'}`}>
                             Stock: {product.stock}
                           </span>
+                          {product.model3d && (
+                            <span className="text-xs px-2 py-0.5 rounded text-gold bg-gold/10">3D</span>
+                          )}
                         </div>
                       </div>
                       <div className="flex gap-2 shrink-0">

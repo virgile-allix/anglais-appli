@@ -8,7 +8,7 @@ import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js'
 import { useCart } from '@/context/CartContext'
 import { useAuth } from '@/context/AuthContext'
 import { apiFetch } from '@/lib/api'
-import { createOrder, getProducts, validatePromoCode, incrementPromoUsage, decrementStock, type PromoCode, type Product } from '@/lib/firestore'
+import { createOrder, getProducts, validatePromoCode, incrementPromoUsage, decrementStock, getUserAddresses, saveUserAddresses, type PromoCode, type Product, type Address } from '@/lib/firestore'
 
 const PAYPAL_CLIENT_ID =
   process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID ||
@@ -29,8 +29,33 @@ export default function CartPage() {
   const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null)
   const [promoError, setPromoError] = useState('')
 
+  // Shipping address
+  const [savedAddresses, setSavedAddresses] = useState<Address[]>([])
+  const [selectedAddressIndex, setSelectedAddressIndex] = useState<number | null>(null)
+  const [showNewAddress, setShowNewAddress] = useState(false)
+  const [newAddress, setNewAddress] = useState<Address>({
+    label: '',
+    firstName: '',
+    lastName: '',
+    street: '',
+    city: '',
+    zip: '',
+    country: 'France',
+    phone: '',
+  })
+  const [addressError, setAddressError] = useState('')
+
   const discount = appliedPromo ? totalPrice * (appliedPromo.discount / 100) : 0
   const finalPrice = totalPrice - discount
+
+  // Charger les adresses de l'utilisateur
+  useEffect(() => {
+    if (!user) return
+    getUserAddresses(user.uid).then((addrs) => {
+      setSavedAddresses(addrs)
+      if (addrs.length > 0) setSelectedAddressIndex(0)
+    }).catch(() => {})
+  }, [user])
 
   // Charger les stocks et nettoyer le panier
   useEffect(() => {
@@ -81,15 +106,62 @@ export default function CartPage() {
     setPromoError('')
   }
 
+  // Get the shipping address (either selected or new)
+  const getShippingAddress = (): Address | null => {
+    if (showNewAddress) {
+      return newAddress
+    }
+    if (selectedAddressIndex !== null && savedAddresses[selectedAddressIndex]) {
+      return savedAddresses[selectedAddressIndex]
+    }
+    return null
+  }
+
+  const validateShippingAddress = (): boolean => {
+    const addr = getShippingAddress()
+    if (!addr) {
+      setAddressError('Veuillez selectionner ou ajouter une adresse de livraison.')
+      return false
+    }
+    if (!addr.firstName.trim() || !addr.lastName.trim() || !addr.street.trim() || !addr.city.trim() || !addr.zip.trim()) {
+      setAddressError('Veuillez remplir tous les champs obligatoires de l\'adresse.')
+      return false
+    }
+    setAddressError('')
+    return true
+  }
+
+  const handleSaveNewAddress = async () => {
+    if (!user) return
+    if (!newAddress.firstName.trim() || !newAddress.lastName.trim() || !newAddress.street.trim() || !newAddress.city.trim() || !newAddress.zip.trim()) {
+      setAddressError('Veuillez remplir tous les champs obligatoires.')
+      return
+    }
+    try {
+      const updated = [...savedAddresses, newAddress]
+      await saveUserAddresses(user.uid, updated)
+      setSavedAddresses(updated)
+      setSelectedAddressIndex(updated.length - 1)
+      setShowNewAddress(false)
+      setNewAddress({ label: '', firstName: '', lastName: '', street: '', city: '', zip: '', country: 'France', phone: '' })
+      setAddressError('')
+    } catch {
+      setAddressError('Erreur lors de la sauvegarde.')
+    }
+  }
+
   /* ── Stripe Checkout ── */
   const handleStripe = async () => {
     setError('')
     if (!user) { router.push('/login'); return }
+    if (!validateShippingAddress()) return
 
     setStripeLoading(true)
     try {
-      // Stocker les items et promo pour la page success (car le panier sera perdu apres redirect)
+      const shippingAddress = getShippingAddress()
+      // Stocker les items, promo et adresse pour la page success (car le panier sera perdu apres redirect)
       localStorage.setItem('ps-checkout-items', JSON.stringify(items))
+      localStorage.setItem('ps-shipping-address', JSON.stringify(shippingAddress))
       if (appliedPromo) {
         localStorage.setItem('ps-promo', JSON.stringify({ id: appliedPromo.id, discount: appliedPromo.discount }))
       } else {
@@ -117,6 +189,7 @@ export default function CartPage() {
   /* ── PayPal : créer la commande côté API ── */
   const handlePayPalCreate = async (): Promise<string> => {
     if (!user) { router.push('/login'); return '' }
+    if (!validateShippingAddress()) return ''
     const token = await user.getIdToken()
     const { orderId } = await apiFetch<{ orderId: string }>('/paypal/create-order', {
       method: 'POST',
@@ -143,7 +216,8 @@ export default function CartPage() {
       if (appliedPromo) {
         await incrementPromoUsage(appliedPromo.id)
       }
-      // Sauvegarder la commande en Firestore
+      // Sauvegarder la commande en Firestore avec adresse de livraison
+      const shippingAddress = getShippingAddress()
       await createOrder({
         uid: user.uid,
         items: items.map((i) => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
@@ -151,6 +225,7 @@ export default function CartPage() {
         status: 'paid',
         paymentId: data.orderID,
         paymentMethod: 'paypal',
+        shippingAddress: shippingAddress || undefined,
       })
       // Decrementer le stock
       for (const item of items) {
@@ -257,6 +332,118 @@ export default function CartPage() {
         {error && (
           <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
             {error}
+          </div>
+        )}
+
+        {/* Adresse de livraison */}
+        {user && (
+          <div className="card p-6 mb-6">
+            <h2 className="text-lg font-semibold mb-4">Adresse de <span className="text-gold">livraison</span></h2>
+
+            {addressError && (
+              <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                {addressError}
+              </div>
+            )}
+
+            {/* Adresses sauvegardees */}
+            {savedAddresses.length > 0 && !showNewAddress && (
+              <div className="flex flex-col gap-3 mb-4">
+                {savedAddresses.map((addr, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setSelectedAddressIndex(i)}
+                    className={`text-left p-4 rounded-xl border transition-all ${
+                      selectedAddressIndex === i
+                        ? 'border-gold bg-gold/10'
+                        : 'border-white/10 hover:border-white/20'
+                    }`}
+                  >
+                    {addr.label && <p className="text-xs text-gold font-semibold mb-1">{addr.label}</p>}
+                    <p className="text-sm font-medium">{addr.firstName} {addr.lastName}</p>
+                    <p className="text-xs text-gray-400">{addr.street}</p>
+                    <p className="text-xs text-gray-400">{addr.zip} {addr.city}, {addr.country}</p>
+                    {addr.phone && <p className="text-xs text-gray-500 mt-1">{addr.phone}</p>}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Bouton nouvelle adresse */}
+            {!showNewAddress ? (
+              <button
+                type="button"
+                onClick={() => { setShowNewAddress(true); setSelectedAddressIndex(null) }}
+                className="text-sm text-gold hover:text-gold-light transition-colors"
+              >
+                + Ajouter une nouvelle adresse
+              </button>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-500">Prenom *</label>
+                    <input className="input-field text-sm" value={newAddress.firstName}
+                      onChange={(e) => setNewAddress({ ...newAddress, firstName: e.target.value })} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-500">Nom *</label>
+                    <input className="input-field text-sm" value={newAddress.lastName}
+                      onChange={(e) => setNewAddress({ ...newAddress, lastName: e.target.value })} />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500">Adresse *</label>
+                  <input className="input-field text-sm" placeholder="123 Rue Example" value={newAddress.street}
+                    onChange={(e) => setNewAddress({ ...newAddress, street: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-500">Code postal *</label>
+                    <input className="input-field text-sm" placeholder="75001" value={newAddress.zip}
+                      onChange={(e) => setNewAddress({ ...newAddress, zip: e.target.value })} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-500">Ville *</label>
+                    <input className="input-field text-sm" placeholder="Paris" value={newAddress.city}
+                      onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-500">Pays</label>
+                    <input className="input-field text-sm" value={newAddress.country}
+                      onChange={(e) => setNewAddress({ ...newAddress, country: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-500">Telephone</label>
+                    <input className="input-field text-sm" placeholder="06 12 34 56 78" value={newAddress.phone}
+                      onChange={(e) => setNewAddress({ ...newAddress, phone: e.target.value })} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-500">Label (optionnel)</label>
+                    <input className="input-field text-sm" placeholder="Domicile, Bureau..." value={newAddress.label}
+                      onChange={(e) => setNewAddress({ ...newAddress, label: e.target.value })} />
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-2">
+                  <button type="button" onClick={handleSaveNewAddress} className="btn-primary text-sm">
+                    Sauvegarder
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowNewAddress(false)
+                      if (savedAddresses.length > 0) setSelectedAddressIndex(0)
+                    }}
+                    className="btn-outline text-sm"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

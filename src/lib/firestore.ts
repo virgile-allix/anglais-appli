@@ -24,6 +24,7 @@ export type Product = {
   image: string
   category: string
   stock: number
+  model3d?: string // URL du fichier GLB/GLTF
 }
 
 export type OrderItem = {
@@ -41,6 +42,7 @@ export type Order = {
   status: 'pending' | 'paid' | 'shipped' | 'delivered'
   paymentId: string
   paymentMethod: 'stripe' | 'paypal'
+  shippingAddress?: Address
   createdAt: Date
 }
 
@@ -66,8 +68,30 @@ export async function getProducts(): Promise<Product[]> {
       image: data.image || '',
       category: data.category || 'general',
       stock: data.stock ?? 0,
+      model3d: data.model3d || '',
     }
   })
+}
+
+export async function getProductById(id: string): Promise<Product | null> {
+  try {
+    const { db } = getFirebase()
+    const snap = await getDoc(doc(db, 'products', id))
+    if (!snap.exists()) return null
+    const data = snap.data()
+    return {
+      id: snap.id,
+      name: data.name || '',
+      price: data.price || 0,
+      description: data.description || '',
+      image: data.image || '',
+      category: data.category || 'general',
+      stock: data.stock ?? 0,
+      model3d: data.model3d || '',
+    }
+  } catch {
+    return null
+  }
 }
 
 export async function createProduct(product: Omit<Product, 'id'>): Promise<string> {
@@ -432,6 +456,105 @@ export async function updateTicketStatus(
 ): Promise<void> {
   const { db } = getFirebase()
   await updateDoc(doc(db, 'tickets', ticketId), { status, updatedAt: Timestamp.now() })
+}
+
+/* ─── Figurines personnalisees (Meshy) ─── */
+
+export type CustomFigurine = {
+  id: string
+  uid: string
+  name: string
+  description: string // prompt envoyé à Meshy
+  style: string // ex: "realistic", "cartoon", "anime"
+  status: 'pending' | 'generating' | 'ready' | 'failed'
+  meshyTaskId?: string // ID de la tâche Meshy
+  modelUrl?: string // URL du GLB généré
+  thumbnailUrl?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export async function createCustomFigurine(
+  figurine: Omit<CustomFigurine, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<string> {
+  const { db } = getFirebase()
+  const now = Timestamp.now()
+  const docRef = await addDoc(collection(db, 'customFigurines'), {
+    ...figurine,
+    createdAt: now,
+    updatedAt: now,
+  })
+  return docRef.id
+}
+
+export async function getUserFigurines(uid: string): Promise<CustomFigurine[]> {
+  try {
+    const { db } = getFirebase()
+    const q = query(
+      collection(db, 'customFigurines'),
+      where('uid', '==', uid),
+      orderBy('createdAt', 'desc')
+    )
+    const snap = await getDocs(q)
+    return snap.docs.map((d) => {
+      const data = d.data()
+      return {
+        id: d.id,
+        uid: data.uid || '',
+        name: data.name || '',
+        description: data.description || '',
+        style: data.style || 'realistic',
+        status: data.status || 'pending',
+        meshyTaskId: data.meshyTaskId || '',
+        modelUrl: data.modelUrl || '',
+        thumbnailUrl: data.thumbnailUrl || '',
+        createdAt: data.createdAt?.toDate?.() || new Date(),
+        updatedAt: data.updatedAt?.toDate?.() || new Date(),
+      }
+    })
+  } catch {
+    return []
+  }
+}
+
+export async function getFigurineById(id: string): Promise<CustomFigurine | null> {
+  try {
+    const { db } = getFirebase()
+    const snap = await getDoc(doc(db, 'customFigurines', id))
+    if (!snap.exists()) return null
+    const data = snap.data()
+    return {
+      id: snap.id,
+      uid: data.uid || '',
+      name: data.name || '',
+      description: data.description || '',
+      style: data.style || 'realistic',
+      status: data.status || 'pending',
+      meshyTaskId: data.meshyTaskId || '',
+      modelUrl: data.modelUrl || '',
+      thumbnailUrl: data.thumbnailUrl || '',
+      createdAt: data.createdAt?.toDate?.() || new Date(),
+      updatedAt: data.updatedAt?.toDate?.() || new Date(),
+    }
+  } catch {
+    return null
+  }
+}
+
+export async function updateFigurine(
+  id: string,
+  data: Partial<Omit<CustomFigurine, 'id' | 'uid' | 'createdAt'>>
+): Promise<void> {
+  const { db } = getFirebase()
+  await updateDoc(doc(db, 'customFigurines', id), {
+    ...data,
+    updatedAt: Timestamp.now(),
+  })
+}
+
+export async function deleteFigurine(id: string): Promise<void> {
+  const { db } = getFirebase()
+  await deleteDoc(doc(db, 'customFigurines', id))
 }
 
 /* ─── Seed : peupler Firestore avec des produits de démo ─── */

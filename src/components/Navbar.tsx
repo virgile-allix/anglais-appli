@@ -14,6 +14,7 @@ export default function Navbar() {
   const links = [
     { href: '/', label: 'Accueil' },
     { href: '/shop', label: 'Boutique' },
+    { href: '/create-figurine', label: 'Creer ma figurine', highlight: true },
     ...(user ? [{ href: '/orders', label: 'Mes commandes' }, { href: '/support', label: 'Support' }] : []),
     ...(profile?.isAdmin ? [{ href: '/admin', label: 'Admin' }] : []),
   ]
@@ -33,7 +34,11 @@ export default function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm text-gray-300 hover:text-gold transition-colors duration-200"
+              className={`text-sm transition-colors duration-200 ${
+                'highlight' in link && link.highlight
+                  ? 'text-gold font-medium hover:text-gold-light'
+                  : 'text-gray-300 hover:text-gold'
+              }`}
             >
               {link.label}
             </Link>

@@ -135,19 +135,26 @@ export default function Home() {
                   desc: 'Recevez votre commande rapidement, où que vous soyez.',
                 },
                 {
-                  icon: '🔒',
-                  title: 'Paiement Sécurisé',
-                  desc: 'Transactions protégées par Stripe, le leader du paiement en ligne.',
+                  icon: '🎨',
+                  title: 'Création 3D',
+                  desc: 'Créez votre propre figurine personnalisée grâce à notre IA générative.',
+                  highlight: true,
+                  link: '/create-figurine',
                 },
               ].map((feature) => (
                 <motion.div
                   key={feature.title}
                   variants={fadeUp}
-                  className="card p-8 text-center"
+                  className={`card p-8 text-center ${'highlight' in feature && feature.highlight ? 'border-gold/30 bg-gold/5' : ''}`}
                 >
                   <div className="text-3xl mb-4">{feature.icon}</div>
                   <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
-                  <p className="text-sm text-gray-500">{feature.desc}</p>
+                  <p className="text-sm text-gray-500 mb-4">{feature.desc}</p>
+                  {'link' in feature && feature.link && (
+                    <Link href={feature.link} className="text-sm text-gold hover:text-gold-light transition-colors">
+                      Essayer maintenant &rarr;
+                    </Link>
+                  )}
                 </motion.div>
               ))}
             </motion.div>

@@ -306,6 +306,15 @@ export default function AccountPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </Link>
+              <Link href="/my-figurines" className="flex items-center justify-between p-3 rounded-lg bg-dark-tertiary hover:bg-white/5 transition-colors">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">Mes figurines</span>
+                  <span className="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded-full">3D</span>
+                </div>
+                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
               <Link href="/support" className="flex items-center justify-between p-3 rounded-lg bg-dark-tertiary hover:bg-white/5 transition-colors">
                 <span className="text-sm">Support</span>
                 <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

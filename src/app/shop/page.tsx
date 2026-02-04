@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useCart } from '@/context/CartContext'
 import { getProducts, type Product } from '@/lib/firestore'
+import ProductModal from '@/components/ProductModal'
 
 const container = {
   hidden: {},
@@ -19,6 +20,7 @@ export default function ShopPage() {
   const { addItem, items: cartItems } = useCart()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
 
   useEffect(() => {
     getProducts()
@@ -77,8 +79,11 @@ export default function ShopPage() {
               const maxReached = inCart >= product.stock
               return (
                 <motion.div key={product.id} variants={item} className="card group">
-                  {/* Image */}
-                  <div className="aspect-square bg-dark-tertiary flex items-center justify-center overflow-hidden relative">
+                  {/* Image - clickable to open modal */}
+                  <div
+                    onClick={() => setSelectedProduct(product)}
+                    className="aspect-square bg-dark-tertiary flex items-center justify-center overflow-hidden relative cursor-pointer"
+                  >
                     {product.image ? (
                       <img
                         src={product.image}
@@ -97,11 +102,22 @@ export default function ShopPage() {
                         </span>
                       </div>
                     )}
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <span className="text-white text-sm font-medium bg-dark/80 px-4 py-2 rounded-lg">
+                        Voir details
+                      </span>
+                    </div>
                   </div>
 
                   {/* Info */}
                   <div className="p-5">
-                    <h3 className="font-semibold text-lg mb-1">{product.name}</h3>
+                    <h3
+                      onClick={() => setSelectedProduct(product)}
+                      className="font-semibold text-lg mb-1 cursor-pointer hover:text-gold transition-colors"
+                    >
+                      {product.name}
+                    </h3>
                     {product.description && (
                       <p className="text-sm text-gray-500 mb-3 line-clamp-2">
                         {product.description}
@@ -131,6 +147,12 @@ export default function ShopPage() {
           </motion.div>
         )}
       </div>
+
+      {/* Product Modal */}
+      <ProductModal
+        product={selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+      />
     </div>
   )
 }
