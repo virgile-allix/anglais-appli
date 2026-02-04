@@ -8,7 +8,7 @@ import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js'
 import { useCart } from '@/context/CartContext'
 import { useAuth } from '@/context/AuthContext'
 import { apiFetch } from '@/lib/api'
-import { createOrder, getProducts, validatePromoCode, incrementPromoUsage, type PromoCode, type Product } from '@/lib/firestore'
+import { createOrder, getProducts, validatePromoCode, incrementPromoUsage, decrementStock, type PromoCode, type Product } from '@/lib/firestore'
 
 const PAYPAL_CLIENT_ID =
   process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID ||
@@ -88,7 +88,8 @@ export default function CartPage() {
 
     setStripeLoading(true)
     try {
-      // Stocker les infos promo pour la page success
+      // Stocker les items et promo pour la page success (car le panier sera perdu apres redirect)
+      localStorage.setItem('ps-checkout-items', JSON.stringify(items))
       if (appliedPromo) {
         localStorage.setItem('ps-promo', JSON.stringify({ id: appliedPromo.id, discount: appliedPromo.discount }))
       } else {
@@ -151,6 +152,14 @@ export default function CartPage() {
         paymentId: data.orderID,
         paymentMethod: 'paypal',
       })
+      // Decrementer le stock
+      for (const item of items) {
+        try {
+          await decrementStock(item.id, item.quantity)
+        } catch {
+          // Non bloquant
+        }
+      }
       clearCart()
       router.push('/orders')
     } catch (err: unknown) {

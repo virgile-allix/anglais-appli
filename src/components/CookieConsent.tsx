@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const COOKIE_KEY = 'ps-cookie-consent'
@@ -49,12 +50,12 @@ export default function CookieConsent() {
                 </p>
                 <p className="text-xs text-gray-500 mt-2">
                   Pour en savoir plus, consultez notre{' '}
-                  <button
-                    onClick={() => setVisible(false)}
+                  <Link
+                    href="/confidentialite"
                     className="text-gold hover:text-gold-light transition-colors underline"
                   >
                     politique de confidentialite
-                  </button>.
+                  </Link>.
                 </p>
               </div>
               <div className="flex gap-3 shrink-0">

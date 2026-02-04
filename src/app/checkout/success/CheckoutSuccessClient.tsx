@@ -1,23 +1,26 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
-import { useCart } from '@/context/CartContext'
-import { createOrder, incrementPromoUsage } from '@/lib/firestore'
+import { useCart, type CartItem } from '@/context/CartContext'
+import { createOrder, incrementPromoUsage, decrementStock } from '@/lib/firestore'
 import { apiFetch } from '@/lib/api'
 
 export default function CheckoutSuccessClient() {
   const searchParams = useSearchParams()
   const sessionId = searchParams.get('session_id')
   const { user } = useAuth()
-  const { items, totalPrice, clearCart } = useCart()
+  const { clearCart } = useCart()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
+  const processedRef = useRef(false)
 
   useEffect(() => {
     if (!sessionId || !user) return
+    if (processedRef.current) return // Eviter double execution
+    processedRef.current = true
 
     const verify = async () => {
       try {
@@ -36,6 +39,22 @@ export default function CheckoutSuccessClient() {
           token,
         })
 
+        // Recuperer les items stockes avant le redirect
+        let checkoutItems: CartItem[] = []
+        try {
+          const stored = localStorage.getItem('ps-checkout-items')
+          if (stored) {
+            checkoutItems = JSON.parse(stored)
+            localStorage.removeItem('ps-checkout-items')
+          }
+        } catch {}
+
+        if (checkoutItems.length === 0) {
+          console.error('No checkout items found')
+          setStatus('error')
+          return
+        }
+
         // Incrementer l'usage du code promo si utilise
         const promoId = result.promoId || ''
         if (promoId) {
@@ -48,23 +67,33 @@ export default function CheckoutSuccessClient() {
         }
 
         // Calculer le total final (montant Stripe en centimes -> euros)
-        const paidTotal = result.amountTotal ? result.amountTotal / 100 : totalPrice
+        const paidTotal = result.amountTotal ? result.amountTotal / 100 : checkoutItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
 
         // Save order in Firestore
-        if (items.length > 0) {
-          await createOrder({
-            uid: user.uid,
-            items: items.map((i) => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
-            total: paidTotal,
-            status: 'paid',
-            paymentId: sessionId,
-            paymentMethod: 'stripe',
-          })
-          clearCart()
+        await createOrder({
+          uid: user.uid,
+          items: checkoutItems.map((i) => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
+          total: paidTotal,
+          status: 'paid',
+          paymentId: sessionId,
+          paymentMethod: 'stripe',
+        })
+
+        // Decrementer le stock de chaque produit
+        for (const item of checkoutItems) {
+          try {
+            await decrementStock(item.id, item.quantity)
+          } catch {
+            // Non bloquant
+          }
         }
 
+        // Vider le panier
+        clearCart()
+
         setStatus('success')
-      } catch {
+      } catch (err) {
+        console.error('Checkout verification error:', err)
         setStatus('error')
       }
     }

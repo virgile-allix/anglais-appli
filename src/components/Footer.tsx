@@ -48,18 +48,23 @@ export default function Footer() {
               Informations
             </h3>
             <div className="flex flex-col gap-2">
-              <span className="text-sm text-gray-500">Livraison 3-5 jours</span>
-              <span className="text-sm text-gray-500">Retours sous 14 jours</span>
-              <span className="text-sm text-gray-500">Paiement s&eacute;curis&eacute;</span>
+              <Link href="/cgv" className="text-sm text-gray-500 hover:text-gold transition-colors">CGV</Link>
+              <Link href="/mentions-legales" className="text-sm text-gray-500 hover:text-gold transition-colors">Mentions legales</Link>
+              <Link href="/confidentialite" className="text-sm text-gray-500 hover:text-gold transition-colors">Confidentialite</Link>
               <span className="text-sm text-gray-500">support@premiumstore.fr</span>
             </div>
           </div>
         </div>
 
-        <div className="mt-10 pt-6 border-t border-white/5 text-center">
+        <div className="mt-10 pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-gray-600">
-            &copy; {new Date().getFullYear()} Premium Store. Tous droits r&eacute;serv&eacute;s.
+            &copy; {new Date().getFullYear()} Premium Store. Tous droits reserves.
           </p>
+          <div className="flex gap-4">
+            <Link href="/cgv" className="text-xs text-gray-600 hover:text-gold transition-colors">CGV</Link>
+            <Link href="/mentions-legales" className="text-xs text-gray-600 hover:text-gold transition-colors">Mentions legales</Link>
+            <Link href="/confidentialite" className="text-xs text-gray-600 hover:text-gold transition-colors">Confidentialite</Link>
+          </div>
         </div>
       </div>
     </footer>

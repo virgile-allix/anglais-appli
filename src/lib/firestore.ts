@@ -203,6 +203,48 @@ export async function setUserAdmin(uid: string, isAdmin: boolean): Promise<void>
   await updateDoc(doc(db, 'users', uid), { isAdmin })
 }
 
+/* ─── Adresses utilisateur ─── */
+
+export type Address = {
+  label: string
+  firstName: string
+  lastName: string
+  street: string
+  city: string
+  zip: string
+  country: string
+  phone: string
+}
+
+export async function getUserAddresses(uid: string): Promise<Address[]> {
+  try {
+    const { db } = getFirebase()
+    const snap = await getDoc(doc(db, 'users', uid))
+    if (!snap.exists()) return []
+    const data = snap.data()
+    return Array.isArray(data.addresses) ? data.addresses : []
+  } catch {
+    return []
+  }
+}
+
+export async function saveUserAddresses(uid: string, addresses: Address[]): Promise<void> {
+  const { db } = getFirebase()
+  await updateDoc(doc(db, 'users', uid), { addresses })
+}
+
+/* ─── Stock ─── */
+
+export async function decrementStock(productId: string, quantity: number): Promise<void> {
+  const { db } = getFirebase()
+  const ref = doc(db, 'products', productId)
+  const snap = await getDoc(ref)
+  if (snap.exists()) {
+    const current = snap.data().stock ?? 0
+    await updateDoc(ref, { stock: Math.max(0, current - quantity) })
+  }
+}
+
 /* ─── Codes promo ─── */
 
 export type PromoCode = {
