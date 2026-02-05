@@ -146,19 +146,21 @@ export async function getUserOrders(uid: string): Promise<Order[]> {
     const { db } = getFirebase()
     const q = query(
       collection(db, 'orders'),
-      where('uid', '==', uid),
-      orderBy('createdAt', 'desc')
+      where('uid', '==', uid)
     )
     const snap = await getDocs(q)
-    return snap.docs.map((d) => {
-      const data = d.data()
-      return {
-        id: d.id,
-        ...data,
-        createdAt: data.createdAt?.toDate?.() || new Date(),
-      } as Order
-    })
-  } catch {
+    return snap.docs
+      .map((d) => {
+        const data = d.data()
+        return {
+          id: d.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || new Date(),
+        } as Order
+      })
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+  } catch (err) {
+    console.error('getUserOrders error:', err)
     return []
   }
 }
