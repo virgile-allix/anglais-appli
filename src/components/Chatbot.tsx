@@ -31,7 +31,7 @@ const FAQ_FR: FaqEntry[] = [
   },
   {
     keywords: ['compte', 'inscription', 'inscrire', 'connexion', 'connecter', 'mot de passe', 'password'],
-    answer: "Creez votre compte via la page d'inscription. Si vous avez oublie votre mot de passe, utilisez la fonction "Mot de passe oublie" sur la page de connexion.",
+    answer: `Creez votre compte via la page d'inscription. Si vous avez oublie votre mot de passe, utilisez la fonction "Mot de passe oublie" sur la page de connexion.`,
   },
   {
     keywords: ['promo', 'code promo', 'reduction', 'coupon', 'remise', 'solde'],
