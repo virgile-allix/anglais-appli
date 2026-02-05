@@ -18,7 +18,7 @@ export default function ConfidentialitePage() {
           <h2 className="text-lg font-semibold mb-3">{t('1. Responsable du traitement', '1. Data controller')}</h2>
           <p className="text-sm text-gray-400 leading-relaxed">
             {t(
-              'Le responsable du traitement des donnees personnelles est Premium Store, joignable a l'adresse :',
+              `Le responsable du traitement des donnees personnelles est Premium Store, joignable a l'adresse :`,
               'The data controller is Premium Store, reachable at:'
             )} <span className="text-gold">support@premiumstore.fr</span>.
           </p>
@@ -33,7 +33,7 @@ export default function ConfidentialitePage() {
             )}
           </p>
           <ul className="text-sm text-gray-400 space-y-2 ml-4">
-            <li className="flex gap-2"><span className="text-gold">&#8226;</span> <span><span className="text-gray-300">{t('Donnees d'identification :', 'Identification data:')}</span> {t('adresse email, mot de passe (chiffre)', 'email address, password (hashed)')}</span></li>
+            <li className="flex gap-2"><span className="text-gold">&#8226;</span> <span><span className="text-gray-300">{t(`Donnees d'identification :`, 'Identification data:')}</span> {t('adresse email, mot de passe (chiffre)', 'email address, password (hashed)')}</span></li>
             <li className="flex gap-2"><span className="text-gold">&#8226;</span> <span><span className="text-gray-300">{t('Donnees de livraison :', 'Shipping data:')}</span> {t('nom, prenom, adresse postale, telephone', 'first name, last name, postal address, phone')}</span></li>
             <li className="flex gap-2"><span className="text-gold">&#8226;</span> <span><span className="text-gray-300">{t('Donnees de commande :', 'Order data:')}</span> {t('produits commandes, montants, statut', 'ordered products, amounts, status')}</span></li>
             <li className="flex gap-2"><span className="text-gold">&#8226;</span> <span><span className="text-gray-300">{t('Donnees de paiement :', 'Payment data:')}</span> {t('traitees directement par Stripe/PayPal (non stockees sur nos serveurs)', 'processed directly by Stripe/PayPal (not stored on our servers)')}</span></li>
@@ -66,7 +66,7 @@ export default function ConfidentialitePage() {
           <h2 className="text-lg font-semibold mb-3">{t('5. Destinataires des donnees', '5. Data recipients')}</h2>
           <p className="text-sm text-gray-400 leading-relaxed">
             {t(
-              'Vos donnees sont accessibles uniquement par l'equipe Premium Store. Elles peuvent etre transmises a nos sous-traitants techniques :',
+              `Vos donnees sont accessibles uniquement par l'equipe Premium Store. Elles peuvent etre transmises a nos sous-traitants techniques :`,
               'Your data is accessible only by the Premium Store team. It may be transmitted to our technical subcontractors:'
             )}
           </p>
@@ -95,7 +95,7 @@ export default function ConfidentialitePage() {
           <ul className="text-sm text-gray-400 space-y-2 ml-4">
             <li className="flex gap-2"><span className="text-gold">&#8226;</span> <span><span className="text-gray-300">{t('Authentification :', 'Authentication:')}</span> {t('maintien de votre session de connexion', 'keep your login session')}</span></li>
             <li className="flex gap-2"><span className="text-gold">&#8226;</span> <span><span className="text-gray-300">{t('Panier :', 'Cart:')}</span> {t('sauvegarde des articles dans votre panier', 'save items in your cart')}</span></li>
-            <li className="flex gap-2"><span className="text-gold">&#8226;</span> <span><span className="text-gray-300">{t('Preferences :', 'Preferences:')}</span> {t('consentement cookies, preferences d'affichage', 'cookie consent, display preferences')}</span></li>
+            <li className="flex gap-2"><span className="text-gold">&#8226;</span> <span><span className="text-gray-300">{t('Preferences :', 'Preferences:')}</span> {t(`consentement cookies, preferences d'affichage`, 'cookie consent, display preferences')}</span></li>
           </ul>
           <p className="text-sm text-gray-400 leading-relaxed mt-3">
             {t(

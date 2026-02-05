@@ -58,7 +58,7 @@ export default function CGVPage() {
           <h2 className="text-lg font-semibold mb-3">{t('Article 5 - Paiement', 'Article 5 - Payment')}</h2>
           <p className="text-sm text-gray-400 leading-relaxed">
             {t(
-              'Le paiement s'effectue par carte bancaire via Stripe ou via PayPal. Le paiement est securise et les donnees bancaires ne sont pas stockees sur nos serveurs. La commande est validee a la reception du paiement integral.',
+              `Le paiement s'effectue par carte bancaire via Stripe ou via PayPal. Le paiement est securise et les donnees bancaires ne sont pas stockees sur nos serveurs. La commande est validee a la reception du paiement integral.`,
               'Payment is made by card via Stripe or via PayPal. Payment is secure and card data is not stored on our servers. The order is validated upon receipt of full payment.'
             )}
           </p>
@@ -68,7 +68,7 @@ export default function CGVPage() {
           <h2 className="text-lg font-semibold mb-3">{t('Article 6 - Livraison', 'Article 6 - Shipping')}</h2>
           <p className="text-sm text-gray-400 leading-relaxed">
             {t(
-              'Les produits sont livres en France metropolitaine dans un delai de 3 a 5 jours ouvres a compter de la confirmation de la commande. Les frais de livraison sont offerts a partir de 50 euros d'achat. Premium Store ne saurait etre tenu responsable des retards de livraison dus au transporteur.',
+              `Les produits sont livres en France metropolitaine dans un delai de 3 a 5 jours ouvres a compter de la confirmation de la commande. Les frais de livraison sont offerts a partir de 50 euros d'achat. Premium Store ne saurait etre tenu responsable des retards de livraison dus au transporteur.`,
               'Products are delivered in mainland France within 3 to 5 business days from order confirmation. Shipping is free for orders over 50 euros. Premium Store cannot be held responsible for delivery delays due to the carrier.'
             )}
           </p>
@@ -88,7 +88,7 @@ export default function CGVPage() {
           <h2 className="text-lg font-semibold mb-3">{t('Article 8 - Garanties', 'Article 8 - Warranties')}</h2>
           <p className="text-sm text-gray-400 leading-relaxed">
             {t(
-              'Tous les produits beneficient de la garantie legale de conformite (articles L217-4 et suivants du Code de la consommation) et de la garantie des vices caches (articles 1641 et suivants du Code civil). En cas de defaut, l'acheteur peut demander la reparation ou le remplacement du produit.',
+              `Tous les produits beneficient de la garantie legale de conformite (articles L217-4 et suivants du Code de la consommation) et de la garantie des vices caches (articles 1641 et suivants du Code civil). En cas de defaut, l'acheteur peut demander la reparation ou le remplacement du produit.`,
               'All products benefit from the legal guarantee of conformity (Articles L217-4 and following of the French Consumer Code) and the warranty against hidden defects (Articles 1641 and following of the French Civil Code). In case of defect, the buyer may request repair or replacement of the product.'
             )}
           </p>
@@ -98,7 +98,7 @@ export default function CGVPage() {
           <h2 className="text-lg font-semibold mb-3">{t('Article 9 - Litiges', 'Article 9 - Disputes')}</h2>
           <p className="text-sm text-gray-400 leading-relaxed">
             {t(
-              'Les presentes CGV sont soumises au droit francais. En cas de litige, une solution amiable sera recherchee avant toute action judiciaire. A defaut, les tribunaux francais seront seuls competents. Conformement a l'article L612-1 du Code de la consommation, le consommateur peut recourir a un mediateur de la consommation.',
+              `Les presentes CGV sont soumises au droit francais. En cas de litige, une solution amiable sera recherchee avant toute action judiciaire. A defaut, les tribunaux francais seront seuls competents. Conformement a l'article L612-1 du Code de la consommation, le consommateur peut recourir a un mediateur de la consommation.`,
               'These terms are governed by French law. In case of dispute, an amicable solution will be sought before any legal action. Failing that, the French courts shall have exclusive jurisdiction. In accordance with Article L612-1 of the French Consumer Code, the consumer may use a consumer mediator.'
             )}
           </p>
@@ -108,7 +108,7 @@ export default function CGVPage() {
           <h2 className="text-lg font-semibold mb-3">{t('Article 10 - Donnees personnelles', 'Article 10 - Personal data')}</h2>
           <p className="text-sm text-gray-400 leading-relaxed">
             {t(
-              'Les informations collectees font l'objet d'un traitement informatique conforme au RGPD. Pour en savoir plus, consultez notre',
+              `Les informations collectees font l'objet d'un traitement informatique conforme au RGPD. Pour en savoir plus, consultez notre`,
               'The information collected is processed in accordance with GDPR. For more information, see our'
             )}{' '}
             <Link href="/confidentialite" className="text-gold hover:text-gold-light transition-colors">
