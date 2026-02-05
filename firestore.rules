@@ -8,6 +8,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Custom Figurines (Meshy): owner read/write, admin full access
+    match /customFigurines/{figurineId} {
+      allow read: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid);
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow update: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid);
+      allow delete: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid);
+    }
+
     // Users: owner read/create, admin read
     match /users/{userId} {
       allow read: if isAdmin() || (request.auth != null && request.auth.uid == userId);

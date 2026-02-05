@@ -72,7 +72,7 @@ export default function ProductViewer3D({ modelUrl, className = '' }: Props) {
 
         <Suspense fallback={<LoadingSpinner />}>
           {modelUrl ? (
-            <Model url={modelUrl} />
+            <Model url={`${process.env.NEXT_PUBLIC_API_URL || 'https://anglais-api1.vercel.app'}/meshy/proxy?url=${encodeURIComponent(modelUrl)}`} />
           ) : (
             <Placeholder />
           )}
