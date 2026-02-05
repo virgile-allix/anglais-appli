@@ -138,7 +138,7 @@ export default function Home() {
         className="fixed top-0 left-0 w-full h-full object-cover"
         style={{ zIndex: 0 }}
       >
-        <source src="/videos/home-bg.mp4" type="video/mp4" />
+        <source src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/videos/home-bg.mp4`} type="video/mp4" />
       </video>
 
       {/* Fixed subtle gradient */}

@@ -141,7 +141,7 @@ export default function ShopPage() {
               playsInline
               className="w-full h-full object-cover scale-105"
             >
-              <source src="/videos/shop-hero.mp4" type="video/mp4" />
+              <source src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/videos/shop-hero.mp4`} type="video/mp4" />
             </video>
             {/* Gradient overlays */}
             <div className="absolute inset-0 bg-gradient-to-b from-dark/60 via-transparent to-dark" />
