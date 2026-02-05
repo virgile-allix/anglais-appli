@@ -7,7 +7,7 @@ export default function Footer() {
   const { t } = useI18n()
 
   return (
-    <footer className="border-t border-white/5 bg-dark">
+    <footer className="relative z-50 border-t border-white/5 bg-dark">
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
