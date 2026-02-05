@@ -492,8 +492,7 @@ export async function getUserFigurines(uid: string): Promise<CustomFigurine[]> {
     const { db } = getFirebase()
     const q = query(
       collection(db, 'customFigurines'),
-      where('uid', '==', uid),
-      orderBy('createdAt', 'desc')
+      where('uid', '==', uid)
     )
     const snap = await getDocs(q)
     return snap.docs.map((d) => {
@@ -511,8 +510,9 @@ export async function getUserFigurines(uid: string): Promise<CustomFigurine[]> {
         createdAt: data.createdAt?.toDate?.() || new Date(),
         updatedAt: data.updatedAt?.toDate?.() || new Date(),
       }
-    })
-  } catch {
+    }).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+  } catch (err) {
+    console.error('Error fetching figurines:', err)
     return []
   }
 }
