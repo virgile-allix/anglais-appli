@@ -466,10 +466,14 @@ export type CustomFigurine = {
   name: string
   description: string // prompt envoyé à Meshy
   style: string // ex: "realistic", "cartoon", "anime"
-  status: 'pending' | 'generating' | 'ready' | 'failed'
-  meshyTaskId?: string // ID de la tâche Meshy
+  status: 'pending' | 'generating' | 'texturing' | 'ready' | 'failed'
+  meshyTaskId?: string // ID de la tâche Meshy (preview)
+  refineTaskId?: string // ID de la tâche Meshy (refine/texturation)
   modelUrl?: string // URL du GLB généré
   thumbnailUrl?: string
+  colors?: string[] // couleurs sélectionnées par le client
+  customColorText?: string // précision couleur libre
+  texturePrompt?: string // prompt de texturation envoyé à Meshy refine
   createdAt: Date
   updatedAt: Date
 }
@@ -505,8 +509,12 @@ export async function getUserFigurines(uid: string): Promise<CustomFigurine[]> {
         style: data.style || 'realistic',
         status: data.status || 'pending',
         meshyTaskId: data.meshyTaskId || '',
+        refineTaskId: data.refineTaskId || '',
         modelUrl: data.modelUrl || '',
         thumbnailUrl: data.thumbnailUrl || '',
+        colors: data.colors || [],
+        customColorText: data.customColorText || '',
+        texturePrompt: data.texturePrompt || '',
         createdAt: data.createdAt?.toDate?.() || new Date(),
         updatedAt: data.updatedAt?.toDate?.() || new Date(),
       }
@@ -531,8 +539,12 @@ export async function getFigurineById(id: string): Promise<CustomFigurine | null
       style: data.style || 'realistic',
       status: data.status || 'pending',
       meshyTaskId: data.meshyTaskId || '',
+      refineTaskId: data.refineTaskId || '',
       modelUrl: data.modelUrl || '',
       thumbnailUrl: data.thumbnailUrl || '',
+      colors: data.colors || [],
+      customColorText: data.customColorText || '',
+      texturePrompt: data.texturePrompt || '',
       createdAt: data.createdAt?.toDate?.() || new Date(),
       updatedAt: data.updatedAt?.toDate?.() || new Date(),
     }

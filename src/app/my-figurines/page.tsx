@@ -10,6 +10,7 @@ import { getUserFigurines, type CustomFigurine } from '@/lib/firestore'
 const statusLabels: Record<CustomFigurine['status'], { label: string; color: string }> = {
   pending: { label: 'En attente', color: 'text-yellow-400 bg-yellow-400/10' },
   generating: { label: 'Generation...', color: 'text-blue-400 bg-blue-400/10' },
+  texturing: { label: 'Texturation...', color: 'text-purple-400 bg-purple-400/10' },
   ready: { label: 'Prete', color: 'text-green-400 bg-green-400/10' },
   failed: { label: 'Echouee', color: 'text-red-400 bg-red-400/10' },
 }
@@ -100,7 +101,7 @@ export default function MyFigurinesPage() {
                         />
                       ) : (
                         <div className="flex flex-col items-center gap-2">
-                          {figurine.status === 'generating' ? (
+                          {figurine.status === 'generating' || figurine.status === 'texturing' ? (
                             <div className="w-10 h-10 border-2 border-gold border-t-transparent rounded-full animate-spin" />
                           ) : (
                             <svg className="w-12 h-12 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

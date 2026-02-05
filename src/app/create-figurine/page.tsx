@@ -7,13 +7,7 @@ import { motion } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
 import { createCustomFigurine, updateFigurine } from '@/lib/firestore'
 import { apiFetch } from '@/lib/api'
-
-const STYLES = [
-  { id: 'realistic', name: 'Realiste', description: 'Rendu photoréaliste avec details fins' },
-  { id: 'cartoon', name: 'Cartoon', description: 'Style dessin anime colore' },
-  { id: 'sculpture', name: 'Sculpture', description: 'Style statue/sculpture classique' },
-  { id: 'low-poly', name: 'Low Poly', description: 'Style geometrique minimaliste' },
-]
+import { COLORS, STYLES } from '@/lib/constants'
 
 export default function CreateFigurinePage() {
   const { user, loading: authLoading } = useAuth()
@@ -22,8 +16,33 @@ export default function CreateFigurinePage() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [style, setStyle] = useState('realistic')
+  const [selectedColors, setSelectedColors] = useState<string[]>([])
+  const [customColorText, setCustomColorText] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const toggleColor = (colorId: string) => {
+    setSelectedColors((prev) =>
+      prev.includes(colorId)
+        ? prev.filter((c) => c !== colorId)
+        : prev.length < 3 ? [...prev, colorId] : prev
+    )
+  }
+
+  const buildTexturePrompt = (): string => {
+    const colorLabels = selectedColors.map(
+      (id) => COLORS.find((c) => c.id === id)?.label
+    ).filter(Boolean)
+
+    let prompt = ''
+    if (colorLabels.length > 0) {
+      prompt = `Couleurs principales: ${colorLabels.join(', ')}.`
+    }
+    if (customColorText.trim()) {
+      prompt += ` ${customColorText.trim()}`
+    }
+    return prompt.trim()
+  }
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -57,6 +76,9 @@ export default function CreateFigurinePage() {
         description: description.trim(),
         style,
         status: 'pending',
+        colors: selectedColors,
+        customColorText: customColorText.trim(),
+        texturePrompt: buildTexturePrompt(),
       })
 
       // Lancer la generation Meshy via l'API Express
@@ -166,6 +188,45 @@ export default function CreateFigurinePage() {
                     <p className="text-xs mt-1 opacity-70">{s.description}</p>
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Couleurs */}
+            <div className="mb-8">
+              <label className="block text-sm font-medium text-gray-300 mb-3">
+                Couleurs souhaitees <span className="text-gray-500">(optionnel, max 3)</span>
+              </label>
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+                {COLORS.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => toggleColor(c.id)}
+                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
+                      selectedColors.includes(c.id)
+                        ? 'border-gold bg-gold/10'
+                        : 'border-white/10 hover:border-white/20'
+                    }`}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-full border border-white/20"
+                      style={{ backgroundColor: c.hex }}
+                    />
+                    <span className="text-xs text-gray-400">{c.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Precision couleur personnalisee */}
+              <div className="mt-4">
+                <input
+                  type="text"
+                  value={customColorText}
+                  onChange={(e) => setCustomColorText(e.target.value)}
+                  placeholder="Precision couleur personnalisee (ex: degrade bleu vers violet)..."
+                  className="input-field text-sm"
+                  maxLength={150}
+                />
               </div>
             </div>
 

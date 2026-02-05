@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -8,10 +8,12 @@ import { useAuth } from '@/context/AuthContext'
 import { getFigurineById, updateFigurine, deleteFigurine, type CustomFigurine } from '@/lib/firestore'
 import { apiFetch } from '@/lib/api'
 import ProductViewer3D from '@/components/ProductViewer3D'
+import { COLORS } from '@/lib/constants'
 
 const statusLabels: Record<CustomFigurine['status'], { label: string; color: string; bg: string }> = {
     pending: { label: 'En attente de generation', color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
     generating: { label: 'Generation en cours...', color: 'text-blue-400', bg: 'bg-blue-400/10' },
+    texturing: { label: 'Texturation en cours...', color: 'text-purple-400', bg: 'bg-purple-400/10' },
     ready: { label: 'Figurine prete !', color: 'text-green-400', bg: 'bg-green-400/10' },
     failed: { label: 'Generation echouee', color: 'text-red-400', bg: 'bg-red-400/10' },
 }
@@ -37,17 +39,67 @@ function FigurineDetailContent() {
                     return
                 }
                 setFigurine(f)
-                // Si en cours de generation, activer le polling
-                if (f.status === 'pending' || f.status === 'generating') {
+                // Si en cours de generation ou texturation, activer le polling
+                if (f.status === 'pending' || f.status === 'generating' || f.status === 'texturing') {
                     setPollingActive(true)
                 }
             })
             .finally(() => setLoading(false))
     }, [figurineId, router])
 
-    // Polling du statut Meshy via l'API Express
+    // Ref pour eviter double declenchement du refine
+    const refineTriggeredRef = useRef(false)
+
+    // Lancer le raffinement (texturation) apres le preview
+    const triggerRefine = useCallback(async (
+        fig: CustomFigurine,
+        previewThumbnailUrl: string | null
+    ) => {
+        try {
+            const texturePrompt = fig.texturePrompt || fig.description || ''
+
+            const data = await apiFetch<{
+                success: boolean
+                refineTaskId: string
+                figurineId: string
+            }>('/meshy/refine', {
+                method: 'POST',
+                body: {
+                    previewTaskId: fig.meshyTaskId,
+                    texturePrompt,
+                    figurineId: fig.id,
+                },
+            })
+
+            if (data.refineTaskId) {
+                await updateFigurine(fig.id, {
+                    status: 'texturing',
+                    refineTaskId: data.refineTaskId,
+                    thumbnailUrl: previewThumbnailUrl || fig.thumbnailUrl,
+                })
+                setFigurine((prev) => prev ? {
+                    ...prev,
+                    status: 'texturing',
+                    refineTaskId: data.refineTaskId,
+                    thumbnailUrl: previewThumbnailUrl || prev.thumbnailUrl || '',
+                } : null)
+            }
+        } catch (error) {
+            console.error('Error triggering refine:', error)
+            await updateFigurine(fig.id, { status: 'failed' })
+            setFigurine((prev) => prev ? { ...prev, status: 'failed' } : null)
+            setPollingActive(false)
+        }
+    }, [])
+
+    // Polling du statut Meshy via l'API Express (2 phases: preview puis refine)
     const checkMeshyStatus = useCallback(async () => {
-        if (!figurine?.meshyTaskId) return
+        if (!figurine) return
+
+        const isTexturing = figurine.status === 'texturing' && figurine.refineTaskId
+        const taskIdToPoll = isTexturing ? figurine.refineTaskId : figurine.meshyTaskId
+
+        if (!taskIdToPoll) return
 
         try {
             const data = await apiFetch<{
@@ -55,45 +107,59 @@ function FigurineDetailContent() {
                 progress: number
                 modelUrl: string | null
                 thumbnailUrl: string | null
-            }>(`/meshy/status/${figurine.meshyTaskId}`)
+            }>(`/meshy/status/${taskIdToPoll}`)
 
-            if (data.status === 'SUCCEEDED' && data.modelUrl) {
-                const modelUrl = data.modelUrl || ''
-                const thumbnailUrl = data.thumbnailUrl || ''
-                await updateFigurine(figurine.id, {
-                    status: 'ready',
-                    modelUrl,
-                    thumbnailUrl,
-                })
-                setFigurine((prev) => prev ? {
-                    ...prev,
-                    status: 'ready',
-                    modelUrl,
-                    thumbnailUrl,
-                } : null)
-                setPollingActive(false)
+            if (data.status === 'SUCCEEDED') {
+                if (isTexturing) {
+                    // Refine termine -> modele texture final pret
+                    const modelUrl = data.modelUrl || ''
+                    const thumbnailUrl = data.thumbnailUrl || ''
+                    await updateFigurine(figurine.id, {
+                        status: 'ready',
+                        modelUrl,
+                        thumbnailUrl,
+                    })
+                    setFigurine((prev) => prev ? {
+                        ...prev,
+                        status: 'ready',
+                        modelUrl,
+                        thumbnailUrl,
+                    } : null)
+                    setPollingActive(false)
+                } else {
+                    // Preview termine -> lancer le refine automatiquement
+                    if (!refineTriggeredRef.current) {
+                        refineTriggeredRef.current = true
+                        await triggerRefine(figurine, data.thumbnailUrl)
+                    }
+                }
             } else if (data.status === 'FAILED') {
                 await updateFigurine(figurine.id, { status: 'failed' })
                 setFigurine((prev) => prev ? { ...prev, status: 'failed' } : null)
                 setPollingActive(false)
             } else if (data.status === 'IN_PROGRESS') {
-                await updateFigurine(figurine.id, { status: 'generating' })
-                setFigurine((prev) => prev ? { ...prev, status: 'generating' } : null)
+                if (figurine.status === 'pending') {
+                    await updateFigurine(figurine.id, { status: 'generating' })
+                    setFigurine((prev) => prev ? { ...prev, status: 'generating' } : null)
+                }
             }
         } catch (error) {
             console.error('Error checking Meshy status:', error)
         }
-    }, [figurine])
+    }, [figurine, triggerRefine])
 
     // Polling interval
     useEffect(() => {
-        if (!pollingActive || !figurine?.meshyTaskId) return
+        if (!pollingActive) return
+
+        const taskId = figurine?.status === 'texturing' ? figurine?.refineTaskId : figurine?.meshyTaskId
+        if (!taskId) return
 
         const interval = setInterval(checkMeshyStatus, 10000) // Toutes les 10 secondes
-        checkMeshyStatus() // Check immédiat
+        checkMeshyStatus() // Check immediat
 
         return () => clearInterval(interval)
-    }, [pollingActive, figurine?.meshyTaskId, checkMeshyStatus])
+    }, [pollingActive, figurine?.meshyTaskId, figurine?.refineTaskId, figurine?.status, checkMeshyStatus])
 
     // Verifier l'authentification
     useEffect(() => {
@@ -151,10 +217,12 @@ function FigurineDetailContent() {
                         <div className="aspect-square">
                             {figurine.status === 'ready' && figurine.modelUrl ? (
                                 <ProductViewer3D modelUrl={figurine.modelUrl} className="h-full" />
-                            ) : figurine.status === 'generating' || figurine.status === 'pending' ? (
+                            ) : figurine.status === 'generating' || figurine.status === 'pending' || figurine.status === 'texturing' ? (
                                 <div className="h-full bg-dark-tertiary rounded-2xl flex flex-col items-center justify-center gap-4">
                                     <div className="w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin" />
-                                    <p className="text-gray-400">Generation en cours...</p>
+                                    <p className="text-gray-400">
+                                        {figurine.status === 'texturing' ? 'Texturation en cours...' : 'Generation en cours...'}
+                                    </p>
                                     <p className="text-xs text-gray-600">Cela peut prendre plusieurs minutes</p>
                                 </div>
                             ) : (
@@ -182,7 +250,7 @@ function FigurineDetailContent() {
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col">
                         {/* Status badge */}
                         <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full w-fit mb-4 ${status.bg}`}>
-                            {(figurine.status === 'pending' || figurine.status === 'generating') && (
+                            {(figurine.status === 'pending' || figurine.status === 'generating' || figurine.status === 'texturing') && (
                                 <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
                             )}
                             <span className={`text-sm font-medium ${status.color}`}>{status.label}</span>
@@ -207,6 +275,26 @@ function FigurineDetailContent() {
                             <span className="text-sm text-gold capitalize">{figurine.style}</span>
                         </div>
 
+                        {/* Couleurs */}
+                        {figurine.colors && figurine.colors.length > 0 && (
+                            <div className="mb-6">
+                                <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                                    Couleurs
+                                </h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {figurine.colors.map((colorId) => {
+                                        const colorDef = COLORS.find((c) => c.id === colorId)
+                                        return colorDef ? (
+                                            <span key={colorId} className="inline-flex items-center gap-1.5 text-sm text-gray-300 bg-white/5 px-3 py-1 rounded-full">
+                                                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: colorDef.hex }} />
+                                                {colorDef.label}
+                                            </span>
+                                        ) : null
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Date */}
                         <div className="mb-8">
                             <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-2">
@@ -229,15 +317,7 @@ function FigurineDetailContent() {
                                 <button className="btn-primary w-full text-center">
                                     Commander cette figurine (impression 3D)
                                 </button>
-                                {figurine.modelUrl && (
-                                    <a
-                                        href={figurine.modelUrl}
-                                        download={`${figurine.name}.glb`}
-                                        className="btn-outline w-full text-center"
-                                    >
-                                        Telecharger le fichier 3D (.glb)
-                                    </a>
-                                )}
+
                             </div>
                         )}
 
