@@ -191,12 +191,8 @@ export default function CreateFigurinePage() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder={t(
-                  'Decrivez votre figurine en detail : apparence, pose, couleurs, accessoires, style...
-
-Ex: Un dragon majestueux aux ecailles bleu saphir, les ailes deployees, crachant des flammes orange. Il porte une couronne d'or et se tient sur un rocher.',
-                  'Describe your figurine in detail: appearance, pose, colors, accessories, style...
-
-Example: A majestic dragon with sapphire-blue scales, wings spread, breathing orange flames. It wears a golden crown and stands on a rock.'
+                  `Decrivez votre figurine en detail : apparence, pose, couleurs, accessoires, style...\n\nEx: Un dragon majestueux aux ecailles bleu saphir, les ailes deployees, crachant des flammes orange. Il porte une couronne d'or et se tient sur un rocher.`,
+                  `Describe your figurine in detail: appearance, pose, colors, accessories, style...\n\nExample: A majestic dragon with sapphire-blue scales, wings spread, breathing orange flames. It wears a golden crown and stands on a rock.`
                 )}
                 className="input-field min-h-[150px] resize-none"
                 maxLength={500}
