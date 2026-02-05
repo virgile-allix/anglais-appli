@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   title: 'Premium Store',
   description: 'Discover our exclusive premium collection',
   icons: {
-    icon: '/favicon.svg',
+    icon: '/favicon.ico',
   },
 }
 
