@@ -39,8 +39,22 @@ export default function MyFigurinesPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen pt-24 pb-16 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="h-9 bg-white/5 rounded w-56 mb-10 animate-pulse" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="card overflow-hidden animate-pulse">
+                <div className="aspect-square bg-white/5" />
+                <div className="p-5 space-y-3">
+                  <div className="h-4 bg-white/5 rounded w-2/3" />
+                  <div className="h-3 bg-white/5 rounded w-full" />
+                  <div className="h-6 bg-white/5 rounded-full w-24" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }

@@ -36,8 +36,31 @@ export default function OrdersPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen pt-24 pb-16 px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="h-9 bg-white/5 rounded w-56 mb-10 animate-pulse" />
+          <div className="flex flex-col gap-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="card p-6 animate-pulse">
+                <div className="flex justify-between mb-4">
+                  <div className="space-y-2">
+                    <div className="h-3 bg-white/5 rounded w-20" />
+                    <div className="h-3 bg-white/5 rounded w-32" />
+                  </div>
+                  <div className="h-6 bg-white/5 rounded-full w-20" />
+                </div>
+                <div className="border-t border-white/5 pt-4 space-y-2">
+                  <div className="h-3 bg-white/5 rounded w-full" />
+                  <div className="h-3 bg-white/5 rounded w-3/4" />
+                </div>
+                <div className="flex justify-between items-center border-t border-white/5 pt-4 mt-4">
+                  <div className="h-3 bg-white/5 rounded w-12" />
+                  <div className="h-6 bg-white/5 rounded w-20" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }

@@ -94,8 +94,22 @@ export default function AccountPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen pt-24 pb-16 px-6">
+        <div className="max-w-3xl mx-auto animate-pulse">
+          <div className="h-9 bg-white/5 rounded w-48 mb-10" />
+          <div className="card p-6 mb-6 space-y-4">
+            <div className="h-4 bg-white/5 rounded w-32" />
+            <div className="h-10 bg-white/5 rounded w-full" />
+            <div className="h-4 bg-white/5 rounded w-32" />
+            <div className="h-10 bg-white/5 rounded w-full" />
+          </div>
+          <div className="card p-6 space-y-4">
+            <div className="h-4 bg-white/5 rounded w-40" />
+            <div className="h-10 bg-white/5 rounded w-full" />
+            <div className="h-10 bg-white/5 rounded w-full" />
+            <div className="h-10 bg-white/5 rounded w-2/3" />
+          </div>
+        </div>
       </div>
     )
   }
