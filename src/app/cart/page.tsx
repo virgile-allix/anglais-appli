@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js'
 import { useCart } from '@/context/CartContext'
 import { useAuth } from '@/context/AuthContext'
+import { useI18n } from '@/context/LanguageContext'
 import { apiFetch } from '@/lib/api'
 import { createOrder, getProducts, validatePromoCode, incrementPromoUsage, decrementStock, getUserAddresses, saveUserAddresses, type PromoCode, type Product, type Address } from '@/lib/firestore'
 
@@ -17,6 +18,7 @@ const PAYPAL_CLIENT_ID =
 export default function CartPage() {
   const { items, removeItem, updateQuantity, clearCart, totalPrice } = useCart()
   const { user } = useAuth()
+  const { t, pick } = useI18n()
   const router = useRouter()
   const [stripeLoading, setStripeLoading] = useState(false)
   const [error, setError] = useState('')
@@ -70,11 +72,11 @@ export default function CartPage() {
         const product = products.find((p) => p.id === item.id)
         if (!product || product.stock <= 0) {
           removeItem(item.id)
-          removed.push(item.name)
+          removed.push(pick(item.nameI18n ?? item.name))
         }
       }
       if (removed.length > 0) {
-        setStockWarning(`Article(s) supprime(s) du panier (plus en stock) : ${removed.join(', ')}`)
+        setStockWarning(t('Article(s) supprime(s) du panier (plus en stock) : ', 'Item(s) removed from cart (out of stock): ') + removed.join(', '))
       }
     }).catch(() => {})
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -87,14 +89,14 @@ export default function CartPage() {
     try {
       const promo = await validatePromoCode(code)
       if (!promo) {
-        setPromoError('Code promo invalide ou expire.')
+        setPromoError(t('Code promo invalide ou expire.', 'Invalid or expired promo code.'))
         setAppliedPromo(null)
       } else {
         setAppliedPromo(promo)
         setPromoError('')
       }
     } catch {
-      setPromoError('Erreur lors de la verification.')
+      setPromoError(t('Erreur lors de la verification.', 'Error during verification.'))
     } finally {
       setPromoLoading(false)
     }
@@ -120,11 +122,11 @@ export default function CartPage() {
   const validateShippingAddress = (): boolean => {
     const addr = getShippingAddress()
     if (!addr) {
-      setAddressError('Veuillez selectionner ou ajouter une adresse de livraison.')
+      setAddressError(t('Veuillez selectionner ou ajouter une adresse de livraison.', 'Please select or add a shipping address.'))
       return false
     }
     if (!addr.firstName.trim() || !addr.lastName.trim() || !addr.street.trim() || !addr.city.trim() || !addr.zip.trim()) {
-      setAddressError('Veuillez remplir tous les champs obligatoires de l\'adresse.')
+      setAddressError(t("Veuillez remplir tous les champs obligatoires de l'adresse.", 'Please fill in all required address fields.'))
       return false
     }
     setAddressError('')
@@ -134,7 +136,7 @@ export default function CartPage() {
   const handleSaveNewAddress = async () => {
     if (!user) return
     if (!newAddress.firstName.trim() || !newAddress.lastName.trim() || !newAddress.street.trim() || !newAddress.city.trim() || !newAddress.zip.trim()) {
-      setAddressError('Veuillez remplir tous les champs obligatoires.')
+      setAddressError(t('Veuillez remplir tous les champs obligatoires.', 'Please fill in all required fields.'))
       return
     }
     try {
@@ -146,11 +148,11 @@ export default function CartPage() {
       setNewAddress({ label: '', firstName: '', lastName: '', street: '', city: '', zip: '', country: 'France', phone: '' })
       setAddressError('')
     } catch {
-      setAddressError('Erreur lors de la sauvegarde.')
+      setAddressError(t('Erreur lors de la sauvegarde.', 'Error while saving.'))
     }
   }
 
-  /* ── Stripe Checkout ── */
+  /* Stripe Checkout */
   const handleStripe = async () => {
     setError('')
     if (!user) { router.push('/login'); return }
@@ -180,13 +182,13 @@ export default function CartPage() {
       })
       window.location.href = url
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur Stripe')
+      setError(err instanceof Error ? err.message : t('Erreur Stripe', 'Stripe error'))
     } finally {
       setStripeLoading(false)
     }
   }
 
-  /* ── PayPal : créer la commande côté API ── */
+  /* PayPal : creer la commande cote API */
   const handlePayPalCreate = async (): Promise<string> => {
     if (!user) { router.push('/login'); return '' }
     if (!validateShippingAddress()) return ''
@@ -202,7 +204,7 @@ export default function CartPage() {
     return orderId
   }
 
-  /* ── PayPal : capturer après approbation ── */
+  /* PayPal : capturer apres approbation */
   const handlePayPalApprove = async (data: { orderID: string }) => {
     if (!user) return
     try {
@@ -220,7 +222,13 @@ export default function CartPage() {
       const shippingAddress = getShippingAddress()
       await createOrder({
         uid: user.uid,
-        items: items.map((i) => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
+        items: items.map((i) => ({
+          id: i.id,
+          name: i.name,
+          nameI18n: i.nameI18n,
+          price: i.price,
+          quantity: i.quantity,
+        })),
         total: finalPrice,
         status: 'paid',
         paymentId: data.orderID,
@@ -238,11 +246,11 @@ export default function CartPage() {
       clearCart()
       router.push('/orders')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur PayPal')
+      setError(err instanceof Error ? err.message : t('Erreur PayPal', 'PayPal error'))
     }
   }
 
-  /* ── Panier vide ── */
+  /* Panier vide */
   if (items.length === 0) {
     return (
       <div className="min-h-screen pt-24 pb-16 px-6 flex items-center justify-center">
@@ -252,9 +260,9 @@ export default function CartPage() {
           className="text-center"
         >
           <p className="text-6xl mb-6 text-gray-700">&#9671;</p>
-          <h1 className="text-2xl font-bold mb-3">Votre panier est vide</h1>
-          <p className="text-gray-500 mb-8">Parcourez notre boutique pour trouver votre bonheur.</p>
-          <Link href="/shop" className="btn-primary">Voir la boutique</Link>
+          <h1 className="text-2xl font-bold mb-3">{t('Votre panier est vide', 'Your cart is empty')}</h1>
+          <p className="text-gray-500 mb-8">{t('Parcourez notre boutique pour trouver votre bonheur.', 'Browse our shop to find what you love.')}</p>
+          <Link href="/shop" className="btn-primary">{t('Voir la boutique', 'View the shop')}</Link>
         </motion.div>
       </div>
     )
@@ -268,7 +276,7 @@ export default function CartPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-3xl font-bold mb-10"
         >
-          Votre <span className="text-gold">Panier</span>
+          {t('Votre', 'Your')} <span className="text-gold">{t('Panier', 'Cart')}</span>
         </motion.h1>
 
         {/* Items */}
@@ -286,16 +294,16 @@ export default function CartPage() {
               >
                 <div className="w-16 h-16 bg-dark-tertiary rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
                   {item.image ? (
-                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                    <img src={item.image} alt={pick(item.nameI18n ?? item.name)} className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-2xl text-gray-700">&#9670;</span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold truncate">{item.name}</h3>
+                  <h3 className="font-semibold truncate">{pick(item.nameI18n ?? item.name)}</h3>
                   <p className="text-gold text-sm">{item.price.toFixed(2)} &euro;</p>
                   {atMax && maxStock !== Infinity && (
-                    <p className="text-xs text-yellow-400 mt-0.5">Max : {maxStock}</p>
+                    <p className="text-xs text-yellow-400 mt-0.5">{t('Max : ', 'Max: ')}{maxStock}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
@@ -338,7 +346,7 @@ export default function CartPage() {
         {/* Adresse de livraison */}
         {user && (
           <div className="card p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4">Adresse de <span className="text-gold">livraison</span></h2>
+            <h2 className="text-lg font-semibold mb-4">{t('Adresse de ', 'Shipping ')}<span className="text-gold">{t('livraison', 'address')}</span></h2>
 
             {addressError && (
               <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
@@ -377,59 +385,59 @@ export default function CartPage() {
                 onClick={() => { setShowNewAddress(true); setSelectedAddressIndex(null) }}
                 className="text-sm text-gold hover:text-gold-light transition-colors"
               >
-                + Ajouter une nouvelle adresse
+                {t('+ Ajouter une nouvelle adresse', '+ Add a new address')}
               </button>
             ) : (
               <div className="flex flex-col gap-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-500">Prenom *</label>
+                    <label className="text-xs text-gray-500">{t('Prenom *', 'First name *')}</label>
                     <input className="input-field text-sm" value={newAddress.firstName}
                       onChange={(e) => setNewAddress({ ...newAddress, firstName: e.target.value })} />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-500">Nom *</label>
+                    <label className="text-xs text-gray-500">{t('Nom *', 'Last name *')}</label>
                     <input className="input-field text-sm" value={newAddress.lastName}
                       onChange={(e) => setNewAddress({ ...newAddress, lastName: e.target.value })} />
                   </div>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-500">Adresse *</label>
-                  <input className="input-field text-sm" placeholder="123 Rue Example" value={newAddress.street}
+                  <label className="text-xs text-gray-500">{t('Adresse *', 'Address *')}</label>
+                  <input className="input-field text-sm" placeholder={t('123 Rue Example', '123 Example St')} value={newAddress.street}
                     onChange={(e) => setNewAddress({ ...newAddress, street: e.target.value })} />
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-500">Code postal *</label>
+                    <label className="text-xs text-gray-500">{t('Code postal *', 'ZIP code *')}</label>
                     <input className="input-field text-sm" placeholder="75001" value={newAddress.zip}
                       onChange={(e) => setNewAddress({ ...newAddress, zip: e.target.value })} />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-500">Ville *</label>
-                    <input className="input-field text-sm" placeholder="Paris" value={newAddress.city}
+                    <label className="text-xs text-gray-500">{t('Ville *', 'City *')}</label>
+                    <input className="input-field text-sm" placeholder={t('Paris', 'Paris')} value={newAddress.city}
                       onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })} />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-500">Pays</label>
+                    <label className="text-xs text-gray-500">{t('Pays', 'Country')}</label>
                     <input className="input-field text-sm" value={newAddress.country}
                       onChange={(e) => setNewAddress({ ...newAddress, country: e.target.value })} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-500">Telephone</label>
-                    <input className="input-field text-sm" placeholder="06 12 34 56 78" value={newAddress.phone}
+                    <label className="text-xs text-gray-500">{t('Telephone', 'Phone')}</label>
+                    <input className="input-field text-sm" placeholder={t('06 12 34 56 78', '+33 6 12 34 56 78')} value={newAddress.phone}
                       onChange={(e) => setNewAddress({ ...newAddress, phone: e.target.value })} />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-500">Label (optionnel)</label>
-                    <input className="input-field text-sm" placeholder="Domicile, Bureau..." value={newAddress.label}
+                    <label className="text-xs text-gray-500">{t('Label (optionnel)', 'Label (optional)')}</label>
+                    <input className="input-field text-sm" placeholder={t('Domicile, Bureau...', 'Home, Office...')} value={newAddress.label}
                       onChange={(e) => setNewAddress({ ...newAddress, label: e.target.value })} />
                   </div>
                 </div>
                 <div className="flex gap-3 mt-2">
                   <button type="button" onClick={handleSaveNewAddress} className="btn-primary text-sm">
-                    Sauvegarder
+                    {t('Sauvegarder', 'Save')}
                   </button>
                   <button
                     type="button"
@@ -439,7 +447,7 @@ export default function CartPage() {
                     }}
                     className="btn-outline text-sm"
                   >
-                    Annuler
+                    {t('Annuler', 'Cancel')}
                   </button>
                 </div>
               </div>
@@ -450,13 +458,13 @@ export default function CartPage() {
         {/* Recapitulatif + Paiement */}
         <div className="card p-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-400">Sous-total</span>
+            <span className="text-gray-400">{t('Sous-total', 'Subtotal')}</span>
             <span className="text-lg font-semibold">{totalPrice.toFixed(2)} &euro;</span>
           </div>
 
           {/* Code promo */}
           <div className="mb-4 pt-3 border-t border-white/5">
-            <label className="text-xs text-gray-500 uppercase tracking-wide mb-2 block">Code promo</label>
+            <label className="text-xs text-gray-500 uppercase tracking-wide mb-2 block">{t('Code promo', 'Promo code')}</label>
             {appliedPromo ? (
               <div className="flex items-center justify-between bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-3">
                 <div>
@@ -464,14 +472,14 @@ export default function CartPage() {
                   <span className="text-green-400/70 text-sm ml-2">-{appliedPromo.discount}%</span>
                 </div>
                 <button onClick={handleRemovePromo} className="text-gray-500 hover:text-red-400 transition-colors text-sm">
-                  Retirer
+                  {t('Retirer', 'Remove')}
                 </button>
               </div>
             ) : (
               <div className="flex gap-2">
                 <input
                   className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:border-gold/50 transition-colors uppercase"
-                  placeholder="Entrez votre code..."
+                  placeholder={t('Entrez votre code...', 'Enter your code...')}
                   value={promoInput}
                   onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleApplyPromo() } }}
@@ -481,7 +489,7 @@ export default function CartPage() {
                   disabled={promoLoading || !promoInput.trim()}
                   className="btn-primary px-5 text-sm disabled:opacity-50"
                 >
-                  {promoLoading ? '...' : 'Appliquer'}
+                  {promoLoading ? '...' : t('Appliquer', 'Apply')}
                 </button>
               </div>
             )}
@@ -493,21 +501,21 @@ export default function CartPage() {
           {/* Reduction */}
           {appliedPromo && (
             <div className="flex items-center justify-between mb-2 text-green-400">
-              <span className="text-sm">Reduction (-{appliedPromo.discount}%)</span>
+              <span className="text-sm">{t('Reduction', 'Discount')} (-{appliedPromo.discount}%)</span>
               <span className="text-sm font-semibold">-{discount.toFixed(2)} &euro;</span>
             </div>
           )}
 
           {/* Total final */}
           <div className="flex items-center justify-between mb-6 pt-3 border-t border-white/5">
-            <span className="text-gray-400 font-semibold">Total</span>
+            <span className="text-gray-400 font-semibold">{t('Total', 'Total')}</span>
             <span className="text-2xl font-bold text-gold">{finalPrice.toFixed(2)} &euro;</span>
           </div>
 
           {!user && (
             <p className="text-sm text-gray-500 mb-4 text-center">
-              <Link href="/login" className="text-gold hover:text-gold-light transition-colors">Connectez-vous</Link>{' '}
-              pour passer commande.
+              <Link href="/login" className="text-gold hover:text-gold-light transition-colors">{t('Connectez-vous', 'Log in')}</Link>{' '}
+              {t('pour passer commande.', 'to place your order.')}
             </p>
           )}
 
@@ -521,10 +529,10 @@ export default function CartPage() {
               {stripeLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="w-4 h-4 border-2 border-dark border-t-transparent rounded-full animate-spin" />
-                  Redirection Stripe...
+                  {t('Redirection Stripe...', 'Redirecting to Stripe...')}
                 </span>
               ) : (
-                'Payer par carte (Stripe)'
+                t('Payer par carte (Stripe)', 'Pay by card (Stripe)')
               )}
             </button>
 
@@ -535,18 +543,18 @@ export default function CartPage() {
                   style={{ layout: 'horizontal', color: 'gold', shape: 'pill', label: 'pay' }}
                   createOrder={handlePayPalCreate}
                   onApprove={handlePayPalApprove}
-                  onError={() => setError('Erreur PayPal. Reessayez.')}
+                  onError={() => setError(t('Erreur PayPal. Reessayez.', 'PayPal error. Please try again.'))}
                 />
               </PayPalScriptProvider>
             ) : (
               <p className="text-xs text-gray-600 text-center">
-                PayPal sera disponible prochainement.
+                {t('PayPal sera disponible prochainement.', 'PayPal will be available soon.')}
               </p>
             )}
 
             {/* Vider */}
             <button onClick={clearCart} className="btn-outline w-full text-center text-sm">
-              Vider le panier
+              {t('Vider le panier', 'Clear cart')}
             </button>
           </div>
         </div>

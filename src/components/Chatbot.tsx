@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useI18n } from '@/context/LanguageContext'
 
 type Message = {
   id: number
@@ -9,34 +10,36 @@ type Message = {
   text: string
 }
 
-const FAQ: { keywords: string[]; answer: string }[] = [
+type FaqEntry = { keywords: string[]; answer: string }
+
+const FAQ_FR: FaqEntry[] = [
   {
-    keywords: ['livraison', 'livrer', 'delai', 'expédition', 'expedition', 'shipping', 'envoi'],
-    answer: 'Nous livrons en 3 a 5 jours ouvrés en France métropolitaine. Les frais de livraison sont offerts a partir de 50€ d\'achat.',
+    keywords: ['livraison', 'livrer', 'delai', 'expedition', 'shipping', 'envoi'],
+    answer: "Nous livrons en 3 a 5 jours ouvres en France metropolitaine. Les frais de livraison sont offerts a partir de 50 EUR d'achat.",
   },
   {
     keywords: ['retour', 'rembourser', 'remboursement', 'echanger', 'echange'],
-    answer: 'Vous disposez de 14 jours apres réception pour retourner un article. Le remboursement est effectue sous 5 jours ouvrés apres réception du retour.',
+    answer: 'Vous disposez de 14 jours apres reception pour retourner un article. Le remboursement est effectue sous 5 jours ouvres apres reception du retour.',
   },
   {
     keywords: ['paiement', 'payer', 'carte', 'paypal', 'stripe', 'visa', 'mastercard'],
-    answer: 'Nous acceptons les paiements par carte bancaire (via Stripe) et PayPal. Toutes les transactions sont sécurisées.',
+    answer: 'Nous acceptons les paiements par carte bancaire (via Stripe) et PayPal. Toutes les transactions sont securisees.',
   },
   {
     keywords: ['commande', 'suivi', 'suivre', 'track', 'statut', 'status', 'ou est'],
-    answer: 'Vous pouvez suivre vos commandes dans la section "Mes commandes" de votre compte. Vous y trouverez le statut en temps réel.',
+    answer: 'Vous pouvez suivre vos commandes dans la section "Mes commandes" de votre compte. Vous y trouverez le statut en temps reel.',
   },
   {
     keywords: ['compte', 'inscription', 'inscrire', 'connexion', 'connecter', 'mot de passe', 'password'],
-    answer: 'Créez votre compte via la page d\'inscription. Si vous avez oublié votre mot de passe, utilisez la fonction "Mot de passe oublié" sur la page de connexion.',
+    answer: "Creez votre compte via la page d'inscription. Si vous avez oublie votre mot de passe, utilisez la fonction "Mot de passe oublie" sur la page de connexion.",
   },
   {
     keywords: ['promo', 'code promo', 'reduction', 'coupon', 'remise', 'solde'],
-    answer: 'Vous pouvez entrer votre code promo lors du passage en caisse dans le panier. Les réductions sont appliquées automatiquement.',
+    answer: "Vous pouvez entrer votre code promo lors du passage en caisse dans le panier. Les reductions sont appliquees automatiquement.",
   },
   {
     keywords: ['stock', 'disponible', 'rupture', 'sold out', 'dispo'],
-    answer: 'Si un produit est en rupture de stock, il sera marqué "Sold Out". Vous pouvez consulter régulièrement notre boutique pour voir les réapprovisionnements.',
+    answer: 'Si un produit est en rupture de stock, il sera marque "Sold Out". Vous pouvez consulter regulierement notre boutique pour voir les reapprovisionnements.',
   },
   {
     keywords: ['contact', 'email', 'telephone', 'support', 'aide', 'help', 'ticket', 'probleme'],
@@ -44,37 +47,104 @@ const FAQ: { keywords: string[]; answer: string }[] = [
   },
   {
     keywords: ['prix', 'tarif', 'cher', 'cout', 'combien'],
-    answer: 'Nos prix sont affichés TTC sur chaque fiche produit. Les frais de livraison sont calculés au moment du paiement.',
+    answer: 'Nos prix sont affiches TTC sur chaque fiche produit. Les frais de livraison sont calcules au moment du paiement.',
   },
   {
     keywords: ['bonjour', 'salut', 'hello', 'hey', 'coucou', 'bonsoir'],
-    answer: 'Bonjour ! Comment puis-je vous aider ? N\'hésitez pas a me poser vos questions sur nos produits, la livraison, les retours ou le paiement.',
+    answer: "Bonjour ! Comment puis-je vous aider ? N'hesitez pas a me poser vos questions sur nos produits, la livraison, les retours ou le paiement.",
   },
   {
     keywords: ['merci', 'thanks', 'parfait', 'super', 'genial', 'top'],
-    answer: 'Avec plaisir ! N\'hésitez pas si vous avez d\'autres questions. Bonne navigation sur Premium Store !',
+    answer: "Avec plaisir ! N'hesitez pas si vous avez d'autres questions. Bonne navigation sur Premium Store !",
   },
 ]
 
-function findAnswer(input: string): string {
-  const lower = input.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+const FAQ_EN: FaqEntry[] = [
+  {
+    keywords: ['shipping', 'deliver', 'delivery', 'dispatch', 'send'],
+    answer: 'We deliver in 3 to 5 business days in mainland France. Shipping is free for orders over 50 EUR.',
+  },
+  {
+    keywords: ['return', 'refund', 'exchange'],
+    answer: 'You have 14 days after delivery to return an item. Refunds are issued within 5 business days after receiving the return.',
+  },
+  {
+    keywords: ['payment', 'pay', 'card', 'paypal', 'stripe', 'visa', 'mastercard'],
+    answer: 'We accept card payments (via Stripe) and PayPal. All transactions are secure.',
+  },
+  {
+    keywords: ['order', 'track', 'tracking', 'status', 'where is'],
+    answer: 'You can track your orders in the "My orders" section of your account. You will find real-time status updates there.',
+  },
+  {
+    keywords: ['account', 'signup', 'sign up', 'login', 'log in', 'password'],
+    answer: 'Create your account via the sign up page. If you forgot your password, use the "Forgot password" option on the login page.',
+  },
+  {
+    keywords: ['promo', 'promo code', 'discount', 'coupon', 'sale'],
+    answer: 'You can enter your promo code at checkout in the cart. Discounts are applied automatically.',
+  },
+  {
+    keywords: ['stock', 'available', 'out of stock', 'sold out'],
+    answer: 'If a product is out of stock, it will be marked "Sold Out". Check our shop regularly for restocks.',
+  },
+  {
+    keywords: ['contact', 'email', 'phone', 'support', 'help', 'ticket', 'issue'],
+    answer: 'You can create a support ticket directly from the /support page. Our team will get back to you as soon as possible. You can also use this chat for FAQs.',
+  },
+  {
+    keywords: ['price', 'cost', 'how much'],
+    answer: 'Our prices are displayed including VAT on each product page. Shipping costs are calculated at checkout.',
+  },
+  {
+    keywords: ['hello', 'hi', 'hey', 'good morning', 'good evening'],
+    answer: 'Hello! How can I help you? Feel free to ask about products, shipping, returns, or payment.',
+  },
+  {
+    keywords: ['thanks', 'thank you', 'great', 'perfect', 'awesome'],
+    answer: 'You are welcome! Feel free to ask if you have more questions. Enjoy browsing Premium Store!',
+  },
+]
 
-  for (const faq of FAQ) {
-    for (const keyword of faq.keywords) {
-      const normalizedKeyword = keyword.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+const FALLBACK_FR = 'Je ne suis pas sur de comprendre votre question. Vous pouvez creer un ticket support pour obtenir une reponse personnalisee de notre equipe : rendez-vous sur la page Support (/support). Sinon, essayez de me demander des informations sur la livraison, les retours, le paiement ou le stock.'
+const FALLBACK_EN = "I'm not sure I understand your question. You can create a support ticket to get a personalized reply from our team: go to the Support page (/support). Otherwise, try asking about shipping, returns, payment, or stock."
+
+function normalizeText(value: string): string {
+  return value.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+}
+
+function findAnswer(input: string, faq: FaqEntry[], fallback: string): string {
+  const lower = normalizeText(input)
+
+  for (const entry of faq) {
+    for (const keyword of entry.keywords) {
+      const normalizedKeyword = normalizeText(keyword)
       if (lower.includes(normalizedKeyword)) {
-        return faq.answer
+        return entry.answer
       }
     }
   }
 
-  return 'Je ne suis pas sur de comprendre votre question. Vous pouvez creer un ticket support pour obtenir une reponse personnalisee de notre equipe : rendez-vous sur la page Support (/support). Sinon, essayez de me demander des informations sur la livraison, les retours, le paiement ou le stock.'
+  return fallback
 }
 
 export default function Chatbot() {
+  const { t, locale } = useI18n()
+  const faq = locale === 'fr' ? FAQ_FR : FAQ_EN
+  const fallback = locale === 'fr' ? FALLBACK_FR : FALLBACK_EN
+  const quickActions = locale === 'fr'
+    ? ['Livraison', 'Retours', 'Paiement', 'Support']
+    : ['Shipping', 'Returns', 'Payment', 'Support']
+
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
-    { id: 0, role: 'bot', text: 'Bonjour ! Je suis l\'assistant Premium Store. Comment puis-je vous aider ?' },
+    {
+      id: 0,
+      role: 'bot',
+      text: locale === 'fr'
+        ? "Bonjour ! Je suis l'assistant Premium Store. Comment puis-je vous aider ?"
+        : 'Hello! I am the Premium Store assistant. How can I help you?',
+    },
   ])
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -93,6 +163,22 @@ export default function Chatbot() {
     }
   }, [open])
 
+  useEffect(() => {
+    setMessages((prev) => {
+      if (prev.length === 1 && prev[0].id === 0) {
+        return [
+          {
+            ...prev[0],
+            text: locale === 'fr'
+              ? "Bonjour ! Je suis l'assistant Premium Store. Comment puis-je vous aider ?"
+              : 'Hello! I am the Premium Store assistant. How can I help you?',
+          },
+        ]
+      }
+      return prev
+    })
+  }, [locale])
+
   const handleSend = () => {
     const text = input.trim()
     if (!text) return
@@ -103,7 +189,7 @@ export default function Chatbot() {
 
     // Simulate typing delay
     setTimeout(() => {
-      const answer = findAnswer(text)
+      const answer = findAnswer(text, faq, fallback)
       const botMsg: Message = { id: nextId.current++, role: 'bot', text: answer }
       setMessages((prev) => [...prev, botMsg])
     }, 500)
@@ -122,7 +208,7 @@ export default function Chatbot() {
       <button
         onClick={() => setOpen(!open)}
         className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gold text-dark flex items-center justify-center shadow-lg hover:bg-gold-light transition-colors"
-        aria-label="Ouvrir le chat"
+        aria-label={t('Ouvrir le chat', 'Open chat')}
       >
         {open ? (
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -154,7 +240,7 @@ export default function Chatbot() {
               </div>
               <div>
                 <p className="text-sm font-semibold">Premium Store</p>
-                <p className="text-xs text-green-400">En ligne</p>
+                <p className="text-xs text-green-400">{t('En ligne', 'Online')}</p>
               </div>
             </div>
 
@@ -180,7 +266,7 @@ export default function Chatbot() {
 
             {/* Quick actions */}
             <div className="px-4 pb-2 flex gap-2 flex-wrap">
-              {['Livraison', 'Retours', 'Paiement', 'Support'].map((q) => (
+              {quickActions.map((q) => (
                 <button
                   key={q}
                   onClick={() => {
@@ -190,7 +276,7 @@ export default function Chatbot() {
                       setMessages((prev) => [...prev, userMsg])
                       setInput('')
                       setTimeout(() => {
-                        const answer = findAnswer(q)
+                        const answer = findAnswer(q, faq, fallback)
                         const botMsg: Message = { id: nextId.current++, role: 'bot', text: answer }
                         setMessages((prev) => [...prev, botMsg])
                       }, 500)
@@ -208,7 +294,7 @@ export default function Chatbot() {
               <input
                 ref={inputRef}
                 className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-gold/50 transition-colors"
-                placeholder="Tapez votre message..."
+                placeholder={t('Tapez votre message...', 'Type your message...')}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}

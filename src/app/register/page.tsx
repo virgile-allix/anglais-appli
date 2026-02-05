@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
+import { useI18n } from '@/context/LanguageContext'
 
 export default function RegisterPage() {
   const { register } = useAuth()
+  const { t } = useI18n()
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -20,11 +22,11 @@ export default function RegisterPage() {
     setError('')
 
     if (password !== confirm) {
-      setError('Les mots de passe ne correspondent pas.')
+      setError(t('Les mots de passe ne correspondent pas.', 'Passwords do not match.'))
       return
     }
     if (password.length < 6) {
-      setError('Le mot de passe doit contenir au moins 6 caractères.')
+      setError(t('Le mot de passe doit contenir au moins 6 caracteres.', 'Password must be at least 6 characters.'))
       return
     }
 
@@ -33,7 +35,7 @@ export default function RegisterPage() {
       await register(email, password)
       router.push('/account')
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Erreur lors de l'inscription"
+      const message = err instanceof Error ? err.message : t("Erreur lors de l'inscription", 'Registration error')
       setError(message)
     } finally {
       setLoading(false)
@@ -49,9 +51,9 @@ export default function RegisterPage() {
         className="w-full max-w-md"
       >
         <div className="card p-8">
-          <h1 className="text-2xl font-bold mb-2">Créer un compte</h1>
+          <h1 className="text-2xl font-bold mb-2">{t('Creer un compte', 'Create an account')}</h1>
           <p className="text-sm text-gray-500 mb-8">
-            Rejoignez-nous pour une expérience personnalisée.
+            {t('Rejoignez-nous pour une experience personnalisee.', 'Join us for a personalized experience.')}
           </p>
 
           {error && (
@@ -70,12 +72,12 @@ export default function RegisterPage() {
                 required
                 autoComplete="email"
                 className="input-field"
-                placeholder="vous@exemple.com"
+                placeholder={t('vous@exemple.com', 'you@example.com')}
               />
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Mot de passe</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('Mot de passe', 'Password')}</label>
               <input
                 type="password"
                 value={password}
@@ -83,12 +85,12 @@ export default function RegisterPage() {
                 required
                 autoComplete="new-password"
                 className="input-field"
-                placeholder="••••••••"
+                placeholder="????????"
               />
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Confirmer le mot de passe</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('Confirmer le mot de passe', 'Confirm password')}</label>
               <input
                 type="password"
                 value={confirm}
@@ -96,7 +98,7 @@ export default function RegisterPage() {
                 required
                 autoComplete="new-password"
                 className="input-field"
-                placeholder="••••••••"
+                placeholder="????????"
               />
             </div>
 
@@ -105,14 +107,14 @@ export default function RegisterPage() {
               disabled={loading}
               className="btn-primary w-full text-center mt-2 disabled:opacity-50"
             >
-              {loading ? 'Inscription...' : "S'inscrire"}
+              {loading ? t('Inscription...', 'Signing up...') : t("S'inscrire", 'Sign up')}
             </button>
           </form>
 
           <p className="text-sm text-gray-500 text-center mt-6">
-            Déjà un compte ?{' '}
+            {t('Deja un compte ?', 'Already have an account?')}{' '}
             <Link href="/login" className="text-gold hover:text-gold-light transition-colors">
-              Se connecter
+              {t('Se connecter', 'Log in')}
             </Link>
           </p>
         </div>

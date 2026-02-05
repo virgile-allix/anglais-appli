@@ -5,19 +5,24 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
 import { useCart } from '@/context/CartContext'
+import { useI18n } from '@/context/LanguageContext'
 
 export default function Navbar() {
   const { user, logout, profile } = useAuth()
   const { totalItems } = useCart()
+  const { t, locale, toggleLocale } = useI18n()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const links = [
-    { href: '/', label: 'Accueil' },
-    { href: '/shop', label: 'Boutique' },
-    { href: '/create-figurine', label: 'Creer ma figurine', highlight: true },
-    ...(user ? [{ href: '/orders', label: 'Mes commandes' }, { href: '/support', label: 'Support' }] : []),
+    { href: '/', label: t('Accueil', 'Home') },
+    { href: '/shop', label: t('Boutique', 'Shop') },
+    { href: '/create-figurine', label: t('Creer ma figurine', 'Create my figurine'), highlight: true },
+    ...(user ? [{ href: '/orders', label: t('Mes commandes', 'My orders') }, { href: '/support', label: t('Support', 'Support') }] : []),
     ...(profile?.isAdmin ? [{ href: '/admin', label: 'Admin' }] : []),
   ]
+
+  const languageLabel = locale === 'fr' ? 'EN' : 'FR'
+  const languageAria = locale === 'fr' ? 'Passer en anglais' : 'Switch to French'
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass">
@@ -47,6 +52,15 @@ export default function Navbar() {
 
         {/* Right side */}
         <div className="flex items-center gap-4">
+          {/* Language */}
+          <button
+            onClick={toggleLocale}
+            aria-label={languageAria}
+            className="hidden md:inline-flex items-center justify-center h-8 px-3 rounded-full border border-white/10 text-xs font-semibold text-gray-300 hover:text-white hover:border-white/20 transition-colors"
+          >
+            {languageLabel}
+          </button>
+
           {/* Panier */}
           <Link href="/cart" className="relative text-gray-300 hover:text-gold transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,13 +85,13 @@ export default function Navbar() {
                 href="/account"
                 className="text-sm text-gray-300 hover:text-gold transition-colors"
               >
-                Mon compte
+                {t('Mon compte', 'My account')}
               </Link>
               <button
                 onClick={logout}
                 className="text-sm text-gray-500 hover:text-white transition-colors"
               >
-                Déconnexion
+                {t('Deconnexion', 'Log out')}
               </button>
             </div>
           ) : (
@@ -85,7 +99,7 @@ export default function Navbar() {
               href="/login"
               className="hidden md:block text-sm text-gray-300 hover:text-gold transition-colors"
             >
-              Connexion
+              {t('Connexion', 'Log in')}
             </Link>
           )}
 
@@ -125,18 +139,24 @@ export default function Navbar() {
                   {link.label}
                 </Link>
               ))}
+              <button
+                onClick={() => { toggleLocale(); setMobileOpen(false) }}
+                className="text-left text-gray-400 hover:text-white transition-colors"
+              >
+                {locale === 'fr' ? 'English' : 'Francais'}
+              </button>
               {user ? (
                 <>
                   <Link href="/account" onClick={() => setMobileOpen(false)} className="text-gray-300 hover:text-gold transition-colors">
-                    Mon compte
+                    {t('Mon compte', 'My account')}
                   </Link>
                   <button onClick={() => { logout(); setMobileOpen(false) }} className="text-left text-gray-500 hover:text-white transition-colors">
-                    Déconnexion
+                    {t('Deconnexion', 'Log out')}
                   </button>
                 </>
               ) : (
                 <Link href="/login" onClick={() => setMobileOpen(false)} className="text-gray-300 hover:text-gold transition-colors">
-                  Connexion
+                  {t('Connexion', 'Log in')}
                 </Link>
               )}
             </div>

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { useCart } from '@/context/CartContext'
 import { getProducts, type Product } from '@/lib/firestore'
 import ProductModal from '@/components/ProductModal'
+import { useI18n } from '@/context/LanguageContext'
 
 const container = {
   hidden: {},
@@ -18,6 +19,7 @@ const item = {
 
 export default function ShopPage() {
   const { addItem, items: cartItems } = useCart()
+  const { t, pick } = useI18n()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
@@ -38,10 +40,10 @@ export default function ShopPage() {
           className="text-center mb-16"
         >
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            La <span className="text-gold">Boutique</span>
+            {t('La', 'The')} <span className="text-gold">{t('Boutique', 'Shop')}</span>
           </h1>
           <p className="text-gray-400 max-w-md mx-auto">
-            Explorez notre sélection de produits premium.
+            {t('Explorez notre selection de produits premium.', 'Explore our selection of premium products.')}
           </p>
         </motion.div>
 
@@ -60,8 +62,8 @@ export default function ShopPage() {
             className="text-center py-20"
           >
             <p className="text-6xl mb-6 text-gray-700">&#9671;</p>
-            <h2 className="text-xl font-semibold mb-3">Aucun produit disponible</h2>
-            <p className="text-gray-500">Revenez bientôt, notre catalogue sera mis à jour.</p>
+            <h2 className="text-xl font-semibold mb-3">{t('Aucun produit disponible', 'No products available')}</h2>
+            <p className="text-gray-500">{t('Revenez bientot, notre catalogue sera mis a jour.', 'Come back soon, our catalog will be updated.')}</p>
           </motion.div>
         )}
 
@@ -77,6 +79,8 @@ export default function ShopPage() {
               const outOfStock = product.stock <= 0
               const inCart = cartItems.find((c) => c.id === product.id)?.quantity || 0
               const maxReached = inCart >= product.stock
+              const productName = pick(product.nameI18n ?? product.name)
+              const productDescription = pick(product.descriptionI18n ?? product.description)
               return (
                 <motion.div key={product.id} variants={item} className="card group">
                   {/* Image - clickable to open modal */}
@@ -87,7 +91,7 @@ export default function ShopPage() {
                     {product.image ? (
                       <img
                         src={product.image}
-                        alt={product.name}
+                        alt={productName}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                     ) : (
@@ -98,14 +102,14 @@ export default function ShopPage() {
                     {outOfStock && (
                       <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                         <span className="text-sm font-semibold text-red-400 bg-red-400/10 px-3 py-1 rounded-full">
-                          Sold Out
+                          {t('Rupture', 'Sold Out')}
                         </span>
                       </div>
                     )}
                     {/* Hover overlay */}
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                       <span className="text-white text-sm font-medium bg-dark/80 px-4 py-2 rounded-lg">
-                        Voir details
+                        {t('Voir details', 'View details')}
                       </span>
                     </div>
                   </div>
@@ -116,11 +120,11 @@ export default function ShopPage() {
                       onClick={() => setSelectedProduct(product)}
                       className="font-semibold text-lg mb-1 cursor-pointer hover:text-gold transition-colors"
                     >
-                      {product.name}
+                      {productName}
                     </h3>
-                    {product.description && (
+                    {productDescription && (
                       <p className="text-sm text-gray-500 mb-3 line-clamp-2">
-                        {product.description}
+                        {productDescription}
                       </p>
                     )}
                     <p className="text-gold font-bold text-xl mb-4">
@@ -131,14 +135,19 @@ export default function ShopPage() {
                       onClick={() =>
                         addItem({
                           id: product.id,
-                          name: product.name,
+                          name: productName,
+                          nameI18n: product.nameI18n,
                           price: product.price,
                           image: product.image,
                         })
                       }
                       className="btn-primary w-full text-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {outOfStock ? 'Sold Out' : maxReached ? `Max stock (${product.stock})` : 'Ajouter au panier'}
+                      {outOfStock
+                        ? t('Rupture', 'Sold Out')
+                        : maxReached
+                          ? t(`Stock max (${product.stock})`, `Max stock (${product.stock})`)
+                          : t('Ajouter au panier', 'Add to cart')}
                     </button>
                   </div>
                 </motion.div>

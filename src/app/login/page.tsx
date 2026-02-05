@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
+import { useI18n } from '@/context/LanguageContext'
 
 export default function LoginPage() {
   const { login } = useAuth()
+  const { t } = useI18n()
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -23,7 +25,7 @@ export default function LoginPage() {
       await login(email, password)
       router.push('/account')
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Erreur de connexion'
+      const message = err instanceof Error ? err.message : t('Erreur de connexion', 'Login error')
       setError(message)
     } finally {
       setLoading(false)
@@ -39,9 +41,9 @@ export default function LoginPage() {
         className="w-full max-w-md"
       >
         <div className="card p-8">
-          <h1 className="text-2xl font-bold mb-2">Connexion</h1>
+          <h1 className="text-2xl font-bold mb-2">{t('Connexion', 'Log in')}</h1>
           <p className="text-sm text-gray-500 mb-8">
-            Accédez à votre espace personnel.
+            {t('Accedez a votre espace personnel.', 'Access your personal space.')}
           </p>
 
           {error && (
@@ -60,12 +62,12 @@ export default function LoginPage() {
                 required
                 autoComplete="email"
                 className="input-field"
-                placeholder="vous@exemple.com"
+                placeholder={t('vous@exemple.com', 'you@example.com')}
               />
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Mot de passe</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('Mot de passe', 'Password')}</label>
               <input
                 type="password"
                 value={password}
@@ -73,7 +75,7 @@ export default function LoginPage() {
                 required
                 autoComplete="current-password"
                 className="input-field"
-                placeholder="••••••••"
+                placeholder="????????"
               />
             </div>
 
@@ -82,14 +84,14 @@ export default function LoginPage() {
               disabled={loading}
               className="btn-primary w-full text-center mt-2 disabled:opacity-50"
             >
-              {loading ? 'Connexion...' : 'Se connecter'}
+              {loading ? t('Connexion...', 'Logging in...') : t('Se connecter', 'Log in')}
             </button>
           </form>
 
           <p className="text-sm text-gray-500 text-center mt-6">
-            Pas encore de compte ?{' '}
+            {t('Pas encore de compte ?', "Don't have an account?")}{' '}
             <Link href="/register" className="text-gold hover:text-gold-light transition-colors">
-              Créer un compte
+              {t('Creer un compte', 'Create an account')}
             </Link>
           </p>
         </div>

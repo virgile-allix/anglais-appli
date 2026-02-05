@@ -13,16 +13,20 @@ import {
   orderBy,
   Timestamp,
 } from 'firebase/firestore'
+import type { LocalizedText } from './i18n'
 
 /* ─── Types ─── */
 
 export type Product = {
   id: string
   name: string
+  nameI18n?: LocalizedText
   price: number
   description: string
+  descriptionI18n?: LocalizedText
   image: string
   category: string
+  categoryI18n?: LocalizedText
   stock: number
   model3d?: string // URL du fichier GLB/GLTF
 }
@@ -30,6 +34,7 @@ export type Product = {
 export type OrderItem = {
   id: string
   name: string
+  nameI18n?: LocalizedText
   price: number
   quantity: number
 }
@@ -60,13 +65,19 @@ export async function getProducts(): Promise<Product[]> {
   const snap = await getDocs(collection(db, 'products'))
   return snap.docs.map((d) => {
     const data = d.data()
+    const nameI18n = (data.name_i18n || {}) as LocalizedText
+    const descriptionI18n = (data.description_i18n || {}) as LocalizedText
+    const categoryI18n = (data.category_i18n || {}) as LocalizedText
     return {
       id: d.id,
-      name: data.name || '',
+      name: data.name || nameI18n.fr || '',
+      nameI18n,
       price: data.price || 0,
-      description: data.description || '',
+      description: data.description || descriptionI18n.fr || '',
+      descriptionI18n,
       image: data.image || '',
-      category: data.category || 'general',
+      category: data.category || categoryI18n.fr || 'general',
+      categoryI18n,
       stock: data.stock ?? 0,
       model3d: data.model3d || '',
     }
@@ -79,13 +90,19 @@ export async function getProductById(id: string): Promise<Product | null> {
     const snap = await getDoc(doc(db, 'products', id))
     if (!snap.exists()) return null
     const data = snap.data()
+    const nameI18n = (data.name_i18n || {}) as LocalizedText
+    const descriptionI18n = (data.description_i18n || {}) as LocalizedText
+    const categoryI18n = (data.category_i18n || {}) as LocalizedText
     return {
       id: snap.id,
-      name: data.name || '',
+      name: data.name || nameI18n.fr || '',
+      nameI18n,
       price: data.price || 0,
-      description: data.description || '',
+      description: data.description || descriptionI18n.fr || '',
+      descriptionI18n,
       image: data.image || '',
-      category: data.category || 'general',
+      category: data.category || categoryI18n.fr || 'general',
+      categoryI18n,
       stock: data.stock ?? 0,
       model3d: data.model3d || '',
     }
@@ -96,8 +113,12 @@ export async function getProductById(id: string): Promise<Product | null> {
 
 export async function createProduct(product: Omit<Product, 'id'>): Promise<string> {
   const { db } = getFirebase()
+  const { nameI18n, descriptionI18n, categoryI18n, ...rest } = product
   const docRef = await addDoc(collection(db, 'products'), {
-    ...product,
+    ...rest,
+    name_i18n: nameI18n || {},
+    description_i18n: descriptionI18n || {},
+    category_i18n: categoryI18n || {},
     createdAt: Timestamp.now(),
   })
   return docRef.id
@@ -105,7 +126,12 @@ export async function createProduct(product: Omit<Product, 'id'>): Promise<strin
 
 export async function updateProduct(id: string, data: Partial<Product>): Promise<void> {
   const { db } = getFirebase()
-  await updateDoc(doc(db, 'products', id), data)
+  const { nameI18n, descriptionI18n, categoryI18n, ...rest } = data
+  const payload: Record<string, unknown> = { ...rest }
+  if (nameI18n) payload.name_i18n = nameI18n
+  if (descriptionI18n) payload.description_i18n = descriptionI18n
+  if (categoryI18n) payload.category_i18n = categoryI18n
+  await updateDoc(doc(db, 'products', id), payload)
 }
 
 export async function deleteProduct(id: string): Promise<void> {
@@ -574,12 +600,72 @@ export async function deleteFigurine(id: string): Promise<void> {
 export async function seedProducts(): Promise<void> {
   const { db } = getFirebase()
   const products = [
-    { name: 'Produit Alpha', price: 49.99, description: 'Description du produit Alpha.', image: '', category: 'general', stock: 10 },
-    { name: 'Produit Beta', price: 79.99, description: 'Description du produit Beta.', image: '', category: 'general', stock: 15 },
-    { name: 'Produit Gamma', price: 129.99, description: 'Description du produit Gamma.', image: '', category: 'general', stock: 5 },
-    { name: 'Produit Delta', price: 199.99, description: 'Description du produit Delta.', image: '', category: 'premium', stock: 3 },
-    { name: 'Produit Epsilon', price: 59.99, description: 'Description du produit Epsilon.', image: '', category: 'general', stock: 20 },
-    { name: 'Produit Zeta', price: 89.99, description: 'Description du produit Zeta.', image: '', category: 'premium', stock: 8 },
+    {
+      name: 'Produit Alpha',
+      price: 49.99,
+      description: 'Description du produit Alpha.',
+      image: '',
+      category: 'general',
+      stock: 10,
+      name_i18n: { fr: 'Produit Alpha', en: 'Product Alpha' },
+      description_i18n: { fr: 'Description du produit Alpha.', en: 'Product Alpha description.' },
+      category_i18n: { fr: 'General', en: 'General' },
+    },
+    {
+      name: 'Produit Beta',
+      price: 79.99,
+      description: 'Description du produit Beta.',
+      image: '',
+      category: 'general',
+      stock: 15,
+      name_i18n: { fr: 'Produit Beta', en: 'Product Beta' },
+      description_i18n: { fr: 'Description du produit Beta.', en: 'Product Beta description.' },
+      category_i18n: { fr: 'General', en: 'General' },
+    },
+    {
+      name: 'Produit Gamma',
+      price: 129.99,
+      description: 'Description du produit Gamma.',
+      image: '',
+      category: 'general',
+      stock: 5,
+      name_i18n: { fr: 'Produit Gamma', en: 'Product Gamma' },
+      description_i18n: { fr: 'Description du produit Gamma.', en: 'Product Gamma description.' },
+      category_i18n: { fr: 'General', en: 'General' },
+    },
+    {
+      name: 'Produit Delta',
+      price: 199.99,
+      description: 'Description du produit Delta.',
+      image: '',
+      category: 'premium',
+      stock: 3,
+      name_i18n: { fr: 'Produit Delta', en: 'Product Delta' },
+      description_i18n: { fr: 'Description du produit Delta.', en: 'Product Delta description.' },
+      category_i18n: { fr: 'Premium', en: 'Premium' },
+    },
+    {
+      name: 'Produit Epsilon',
+      price: 59.99,
+      description: 'Description du produit Epsilon.',
+      image: '',
+      category: 'general',
+      stock: 20,
+      name_i18n: { fr: 'Produit Epsilon', en: 'Product Epsilon' },
+      description_i18n: { fr: 'Description du produit Epsilon.', en: 'Product Epsilon description.' },
+      category_i18n: { fr: 'General', en: 'General' },
+    },
+    {
+      name: 'Produit Zeta',
+      price: 89.99,
+      description: 'Description du produit Zeta.',
+      image: '',
+      category: 'premium',
+      stock: 8,
+      name_i18n: { fr: 'Produit Zeta', en: 'Product Zeta' },
+      description_i18n: { fr: 'Description du produit Zeta.', en: 'Product Zeta description.' },
+      category_i18n: { fr: 'Premium', en: 'Premium' },
+    },
   ]
 
   for (const product of products) {

@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
+import { useI18n } from '@/context/LanguageContext'
+import { normalizeLocalizedText } from '@/lib/i18n'
+import { apiFetch } from '@/lib/api'
 import {
   createProduct,
   deleteProduct,
@@ -46,20 +49,26 @@ const TICKET_STATUS_OPTIONS: Ticket['status'][] = ['open', 'in_progress', 'close
 
 type ProductForm = {
   name: string
+  nameEn: string
   price: string
   description: string
+  descriptionEn: string
   image: string
   category: string
+  categoryEn: string
   stock: string
   model3d: string
 }
 
 const EMPTY_PRODUCT: ProductForm = {
   name: '',
+  nameEn: '',
   price: '',
   description: '',
+  descriptionEn: '',
   image: '',
   category: 'general',
+  categoryEn: 'general',
   stock: '0',
   model3d: '',
 }
@@ -81,6 +90,7 @@ const EMPTY_PROMO: PromoForm = {
 export default function AdminPage() {
   const { user, profile, loading: authLoading } = useAuth()
   const router = useRouter()
+  const { t, pick, localeTag } = useI18n()
 
   const [products, setProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<Order[]>([])
@@ -104,6 +114,8 @@ export default function AdminPage() {
   const [ticketReply, setTicketReply] = useState('')
   const [sendingReply, setSendingReply] = useState(false)
   const [filterTicketStatus, setFilterTicketStatus] = useState<Ticket['status'] | 'all'>('all')
+  const [translating, setTranslating] = useState(false)
+  const [translateOverwrite, setTranslateOverwrite] = useState(false)
 
   const isAdmin = Boolean(profile?.isAdmin)
 
@@ -185,9 +197,21 @@ export default function AdminPage() {
     const q = searchProduct.toLowerCase()
     return products.filter(
       (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q)
+        [
+          p.name,
+          p.description,
+          p.category,
+          p.nameI18n?.fr,
+          p.nameI18n?.en,
+          p.descriptionI18n?.fr,
+          p.descriptionI18n?.en,
+          p.categoryI18n?.fr,
+          p.categoryI18n?.en,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(q)
     )
   }, [products, searchProduct])
 
@@ -218,10 +242,13 @@ export default function AdminPage() {
   const startEditProduct = (p: Product) => {
     setProductForm({
       name: p.name,
+      nameEn: p.nameI18n?.en || p.name,
       price: String(p.price),
       description: p.description,
+      descriptionEn: p.descriptionI18n?.en || p.description,
       image: p.image,
       category: p.category,
+      categoryEn: p.categoryI18n?.en || p.category,
       stock: String(p.stock ?? 0),
       model3d: p.model3d || '',
     })
@@ -237,17 +264,26 @@ export default function AdminPage() {
 
     const price = Number(productForm.price)
     const stock = Number(productForm.stock)
-    if (!productForm.name.trim()) { setError('Nom requis.'); return }
+    const nameFr = productForm.name.trim()
+    const nameEn = productForm.nameEn.trim()
+    const descriptionFr = productForm.description.trim()
+    const descriptionEn = productForm.descriptionEn.trim()
+    const categoryFr = productForm.category.trim() || 'general'
+    const categoryEn = productForm.categoryEn.trim() || categoryFr
+    if (!nameFr) { setError('Nom requis.'); return }
     if (Number.isNaN(price) || price < 0) { setError('Prix invalide.'); return }
     if (Number.isNaN(stock) || stock < 0) { setError('Stock invalide.'); return }
 
     setSaving(true)
     const data = {
-      name: productForm.name.trim(),
+      name: nameFr,
+      nameI18n: normalizeLocalizedText(nameFr, nameEn),
       price,
-      description: productForm.description.trim(),
+      description: descriptionFr,
+      descriptionI18n: normalizeLocalizedText(descriptionFr, descriptionEn),
       image: productForm.image.trim(),
-      category: productForm.category.trim() || 'general',
+      category: categoryFr,
+      categoryI18n: normalizeLocalizedText(categoryFr, categoryEn),
       stock: Math.floor(stock),
       model3d: productForm.model3d.trim(),
     }
@@ -429,6 +465,32 @@ export default function AdminPage() {
     }
   }
 
+  /* --- Traduction automatique (produits) --- */
+
+  const handleTranslateProducts = async () => {
+    if (!user) return
+    setTranslating(true)
+    setError('')
+    setSuccess('')
+    try {
+      const token = await user.getIdToken()
+      const result = await apiFetch('/translate/products', {
+        method: 'POST',
+        body: { overwrite: translateOverwrite },
+        token,
+      })
+      setSuccess(
+        `Traduction terminee: ${result.updated}/${result.total} produits mis a jour.`
+      )
+      const refreshed = await getProducts()
+      setProducts(refreshed)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur traduction')
+    } finally {
+      setTranslating(false)
+    }
+  }
+
   /* ─── Guards ─── */
 
   if (authLoading || loading) {
@@ -588,7 +650,7 @@ export default function AdminPage() {
                       </div>
                       <div className="flex items-center gap-4">
                         <span className="text-gold font-semibold">{order.total.toFixed(2)} &euro;</span>
-                        <span className="text-xs text-gray-600">{order.createdAt.toLocaleDateString('fr-FR')}</span>
+                        <span className="text-xs text-gray-600">{order.createdAt.toLocaleDateString(localeTag)}</span>
                       </div>
                     </div>
                   ))}
@@ -604,6 +666,35 @@ export default function AdminPage() {
         {/* ═══════ PRODUITS ═══════ */}
         {activeTab === 'products' && (
           <motion.div key="products" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-8">
+            <section className="card p-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold">Traduction automatique</h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Ajoute automatiquement les versions EN des noms, descriptions et categories des produits.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2 text-sm text-gray-400">
+                    <input
+                      type="checkbox"
+                      checked={translateOverwrite}
+                      onChange={(e) => setTranslateOverwrite(e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-600 text-gold focus:ring-gold bg-dark-tertiary"
+                    />
+                    Ecraser les traductions existantes
+                  </label>
+                  <button
+                    onClick={handleTranslateProducts}
+                    disabled={translating}
+                    className="btn-primary text-sm disabled:opacity-50"
+                  >
+                    {translating ? 'Traduction en cours...' : 'Traduire tous les produits'}
+                  </button>
+                </div>
+              </div>
+            </section>
+
             {/* Formulaire */}
             <section className="card p-6">
               <div className="flex items-center justify-between mb-4">
@@ -614,9 +705,14 @@ export default function AdminPage() {
               </div>
               <form onSubmit={handleProductSubmit} className="grid gap-4 md:grid-cols-2">
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">Nom *</label>
-                  <input className="input-field" placeholder="Nom du produit" value={productForm.name}
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">{t('Nom (FR) *', 'Name (FR) *')}</label>
+                  <input className="input-field" placeholder={t('Nom du produit', 'Product name')} value={productForm.name}
                     onChange={(e) => setProductForm((f) => ({ ...f, name: e.target.value }))} required />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">{t('Nom (EN)', 'Name (EN)')}</label>
+                  <input className="input-field" placeholder={t('Nom en anglais', 'Name in English')} value={productForm.nameEn}
+                    onChange={(e) => setProductForm((f) => ({ ...f, nameEn: e.target.value }))} />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs text-gray-500 uppercase tracking-wide">Prix (EUR) *</label>
@@ -624,46 +720,56 @@ export default function AdminPage() {
                     value={productForm.price} onChange={(e) => setProductForm((f) => ({ ...f, price: e.target.value }))} required />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">Image URL</label>
-                  <input className="input-field" placeholder="https://..." value={productForm.image}
-                    onChange={(e) => setProductForm((f) => ({ ...f, image: e.target.value }))} />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">Categorie</label>
-                  <input className="input-field" placeholder="general" value={productForm.category}
-                    onChange={(e) => setProductForm((f) => ({ ...f, category: e.target.value }))} />
-                </div>
-                <div className="flex flex-col gap-1">
                   <label className="text-xs text-gray-500 uppercase tracking-wide">Stock</label>
                   <input className="input-field" placeholder="0" type="number" min="0" value={productForm.stock}
                     onChange={(e) => setProductForm((f) => ({ ...f, stock: e.target.value }))} />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">Modele 3D (GLB URL)</label>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">Image URL</label>
+                  <input className="input-field" placeholder="https://..." value={productForm.image}
+                    onChange={(e) => setProductForm((f) => ({ ...f, image: e.target.value }))} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">{t('Modele 3D (GLB URL)', '3D model (GLB URL)')}</label>
                   <input className="input-field" placeholder="https://...model.glb" value={productForm.model3d}
                     onChange={(e) => setProductForm((f) => ({ ...f, model3d: e.target.value }))} />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">Apercu</label>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">{t('Categorie (FR)', 'Category (FR)')}</label>
+                  <input className="input-field" placeholder="general" value={productForm.category}
+                    onChange={(e) => setProductForm((f) => ({ ...f, category: e.target.value }))} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">{t('Categorie (EN)', 'Category (EN)')}</label>
+                  <input className="input-field" placeholder="general" value={productForm.categoryEn}
+                    onChange={(e) => setProductForm((f) => ({ ...f, categoryEn: e.target.value }))} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">{t('Description (FR)', 'Description (FR)')}</label>
+                  <textarea className="input-field" placeholder={t('Description du produit...', 'Product description...')} value={productForm.description}
+                    onChange={(e) => setProductForm((f) => ({ ...f, description: e.target.value }))} rows={3} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">{t('Description (EN)', 'Description (EN)')}</label>
+                  <textarea className="input-field" placeholder={t('Description en anglais...', 'Description in English...')} value={productForm.descriptionEn}
+                    onChange={(e) => setProductForm((f) => ({ ...f, descriptionEn: e.target.value }))} rows={3} />
+                </div>
+                <div className="flex flex-col gap-1 md:col-span-2">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">{t('Apercu', 'Preview')}</label>
                   <div className="input-field h-[42px] flex items-center gap-3 overflow-hidden">
                     {productForm.image ? (
-                      <img src={productForm.image} alt="Apercu" className="h-8 w-8 object-cover rounded"
+                      <img src={productForm.image} alt={t('Apercu', 'Preview')} className="h-8 w-8 object-cover rounded"
                         onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                     ) : (
-                      <span className="text-gray-600 text-sm">Aucune image</span>
+                      <span className="text-gray-600 text-sm">{t('Aucune image', 'No image')}</span>
                     )}
                     {productForm.model3d && (
                       <span className="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded">3D</span>
                     )}
                   </div>
                 </div>
-                <div className="flex flex-col gap-1 md:col-span-2">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">Description</label>
-                  <textarea className="input-field" placeholder="Description du produit..." value={productForm.description}
-                    onChange={(e) => setProductForm((f) => ({ ...f, description: e.target.value }))} rows={3} />
-                </div>
                 <button type="submit" disabled={saving} className="btn-primary md:col-span-2 disabled:opacity-50">
-                  {saving ? 'Sauvegarde...' : editingProductId ? 'Mettre a jour' : 'Ajouter le produit'}
+                  {saving ? t('Sauvegarde...', 'Saving...') : editingProductId ? t('Mettre a jour', 'Update') : t('Ajouter le produit', 'Add product')}
                 </button>
               </form>
             </section>
@@ -688,17 +794,21 @@ export default function AdminPage() {
                       }`}>
                       <div className="w-14 h-14 bg-dark-tertiary rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
                         {product.image ? (
-                          <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                          <img src={product.image} alt={pick(product.nameI18n ?? product.name)} className="w-full h-full object-cover" />
                         ) : (
                           <span className="text-xl text-gray-700">&#9670;</span>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold">{product.name}</p>
-                        <p className="text-sm text-gray-500 truncate">{product.description || 'Pas de description'}</p>
+                        <p className="font-semibold">{pick(product.nameI18n ?? product.name)}</p>
+                        <p className="text-sm text-gray-500 truncate">
+                          {pick(product.descriptionI18n ?? product.description, t('Pas de description', 'No description'))}
+                        </p>
                         <div className="flex flex-wrap gap-2 mt-1">
                           <span className="text-gold font-semibold text-sm">{product.price.toFixed(2)} &euro;</span>
-                          <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded">{product.category}</span>
+                          <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded">
+                            {pick(product.categoryI18n ?? product.category)}
+                          </span>
                           <span className={`text-xs px-2 py-0.5 rounded ${product.stock > 0 ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'}`}>
                             Stock: {product.stock}
                           </span>
@@ -769,10 +879,12 @@ export default function AdminPage() {
                       </div>
                       <div className="mt-2 ml-4 text-xs text-gray-500 flex flex-col gap-0.5">
                         {order.items.map((item) => (
-                          <span key={item.id}>{item.name} x{item.quantity} &mdash; {(item.price * item.quantity).toFixed(2)} &euro;</span>
+                          <span key={item.id}>
+                            {pick(item.nameI18n ?? item.name)} x{item.quantity} &mdash; {(item.price * item.quantity).toFixed(2)} &euro;
+                          </span>
                         ))}
                       </div>
-                      <p className="mt-2 text-xs text-gray-600">{order.createdAt.toLocaleString('fr-FR')}</p>
+                      <p className="mt-2 text-xs text-gray-600">{order.createdAt.toLocaleString(localeTag)}</p>
                     </div>
                   ))}
                 </div>
@@ -795,7 +907,7 @@ export default function AdminPage() {
                       <div>
                         <p className="text-sm text-gray-200">{u.email || u.uid}</p>
                         <p className="text-xs text-gray-500 font-mono">{u.uid}</p>
-                        <p className="text-xs text-gray-600">Inscrit le {u.createdAt.toLocaleDateString('fr-FR')}</p>
+                        <p className="text-xs text-gray-600">Inscrit le {u.createdAt.toLocaleDateString(localeTag)}</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className={`text-xs font-semibold px-3 py-1 rounded-full ${u.isAdmin ? 'bg-gold/20 text-gold' : 'bg-gray-500/20 text-gray-400'}`}>
@@ -936,7 +1048,7 @@ export default function AdminPage() {
                       <div>
                         <h2 className="text-lg font-semibold">{ticket.subject}</h2>
                         <p className="text-xs text-gray-500">
-                          {ticket.email} &middot; #{ticket.id.slice(0, 8)} &middot; {ticket.createdAt.toLocaleDateString('fr-FR')}
+                          {ticket.email} &middot; #{ticket.id.slice(0, 8)} &middot; {ticket.createdAt.toLocaleDateString(localeTag)}
                         </p>
                       </div>
                       <select className="input-field text-sm w-auto" value={ticket.status}
@@ -957,7 +1069,7 @@ export default function AdminPage() {
                               : 'bg-white/10 text-gray-200 rounded-bl-md'
                           }`}>
                             <p className="text-xs text-gray-500 mb-1">
-                              {msg.sender === 'admin' ? 'Vous (Admin)' : msg.senderEmail || 'Client'} &middot; {msg.createdAt.toLocaleString('fr-FR')}
+                              {msg.sender === 'admin' ? 'Vous (Admin)' : msg.senderEmail || 'Client'} &middot; {msg.createdAt.toLocaleString(localeTag)}
                             </p>
                             <p className="whitespace-pre-wrap">{msg.text}</p>
                           </div>
@@ -1003,7 +1115,7 @@ export default function AdminPage() {
                             <p className="text-xs text-gray-500 mt-0.5">{ticket.email}</p>
                             <p className="text-xs text-gray-600 truncate mt-0.5">{lastMsg?.text || ''}</p>
                             <p className="text-xs text-gray-600 mt-1">
-                              {ticket.messages.length} msg &middot; {ticket.updatedAt.toLocaleDateString('fr-FR')}
+                              {ticket.messages.length} msg &middot; {ticket.updatedAt.toLocaleDateString(localeTag)}
                             </p>
                           </div>
                           <span className={`text-xs font-semibold px-3 py-1 rounded-full shrink-0 ${TICKET_STATUS_LABELS[ticket.status].color}`}>

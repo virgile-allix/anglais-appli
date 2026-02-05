@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
+import { useI18n } from '@/context/LanguageContext'
 import {
   createTicket,
   getUserTickets,
@@ -12,14 +13,9 @@ import {
   type Ticket,
 } from '@/lib/firestore'
 
-const STATUS_LABELS: Record<Ticket['status'], { label: string; color: string }> = {
-  open: { label: 'Ouvert', color: 'text-green-400 bg-green-400/10' },
-  in_progress: { label: 'En cours', color: 'text-yellow-400 bg-yellow-400/10' },
-  closed: { label: 'Ferme', color: 'text-gray-400 bg-gray-400/10' },
-}
-
 export default function SupportPage() {
   const { user, profile, loading: authLoading } = useAuth()
+  const { t, localeTag } = useI18n()
   const router = useRouter()
 
   const [tickets, setTickets] = useState<Ticket[]>([])
@@ -37,10 +33,16 @@ export default function SupportPage() {
   const [reply, setReply] = useState('')
   const [sending, setSending] = useState(false)
 
+  const statusLabels: Record<Ticket['status'], { label: string; color: string }> = {
+    open: { label: t('Ouvert', 'Open'), color: 'text-green-400 bg-green-400/10' },
+    in_progress: { label: t('En cours', 'In progress'), color: 'text-yellow-400 bg-yellow-400/10' },
+    closed: { label: t('Ferme', 'Closed'), color: 'text-gray-400 bg-gray-400/10' },
+  }
+
   useEffect(() => {
     if (!error && !success) return
-    const t = setTimeout(() => { setError(''); setSuccess('') }, 4000)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => { setError(''); setSuccess('') }, 4000)
+    return () => clearTimeout(timer)
   }, [error, success])
 
   useEffect(() => {
@@ -52,15 +54,15 @@ export default function SupportPage() {
 
     getUserTickets(user.uid)
       .then(setTickets)
-      .catch(() => setError('Erreur chargement tickets'))
+      .catch(() => setError(t('Erreur chargement tickets', 'Error loading tickets')))
       .finally(() => setLoading(false))
-  }, [user, authLoading, router])
+  }, [user, authLoading, router, t])
 
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user || !profile) return
     if (!subject.trim() || !message.trim()) {
-      setError('Sujet et message requis.')
+      setError(t('Sujet et message requis.', 'Subject and message required.'))
       return
     }
 
@@ -103,10 +105,10 @@ export default function SupportPage() {
       setTickets((prev) => [newTicket, ...prev])
       setSubject('')
       setMessage('')
-      setSuccess('Ticket cree ! Notre equipe va vous repondre.')
+      setSuccess(t('Ticket cree ! Notre equipe va vous repondre.', 'Ticket created! Our team will reply.'))
       setOpenTicketId(id)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur creation ticket')
+      setError(err instanceof Error ? err.message : t('Erreur creation ticket', 'Error creating ticket'))
     } finally {
       setCreating(false)
     }
@@ -125,12 +127,12 @@ export default function SupportPage() {
       })
 
       setTickets((prev) =>
-        prev.map((t) =>
-          t.id === ticketId
+        prev.map((ticket) =>
+          ticket.id === ticketId
             ? {
-                ...t,
+                ...ticket,
                 messages: [
-                  ...t.messages,
+                  ...ticket.messages,
                   {
                     sender: 'client' as const,
                     senderEmail: profile.email,
@@ -140,12 +142,12 @@ export default function SupportPage() {
                 ],
                 updatedAt: new Date(),
               }
-            : t
+            : ticket
         )
       )
       setReply('')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur envoi message')
+      setError(err instanceof Error ? err.message : t('Erreur envoi message', 'Error sending message'))
     } finally {
       setSending(false)
     }
@@ -161,16 +163,16 @@ export default function SupportPage() {
 
   if (!user) return null
 
-  const openTicket = tickets.find((t) => t.id === openTicketId)
+  const openTicket = tickets.find((ticket) => ticket.id === openTicketId)
 
   return (
     <div className="min-h-screen pt-24 pb-16 px-6">
       <div className="max-w-4xl mx-auto flex flex-col gap-8">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-3xl font-bold">
-            <span className="text-gold">Support</span> Client
+            <span className="text-gold">{t('Support', 'Support')}</span> {t('Client', 'Customer')}
           </h1>
-          <p className="text-gray-500 mt-1">Creez un ticket et notre equipe vous repondra.</p>
+          <p className="text-gray-500 mt-1">{t('Creez un ticket et notre equipe vous repondra.', 'Create a ticket and our team will respond.')}</p>
         </motion.div>
 
         {/* Messages */}
@@ -196,7 +198,7 @@ export default function SupportPage() {
               onClick={() => { setOpenTicketId(null); setReply('') }}
               className="text-sm text-gray-500 hover:text-white transition-colors self-start"
             >
-              &larr; Retour aux tickets
+              &larr; {t('Retour aux tickets', 'Back to tickets')}
             </button>
 
             <div className="card p-6">
@@ -204,11 +206,11 @@ export default function SupportPage() {
                 <div>
                   <h2 className="text-lg font-semibold">{openTicket.subject}</h2>
                   <p className="text-xs text-gray-500">
-                    #{openTicket.id.slice(0, 8)} &middot; {openTicket.createdAt.toLocaleDateString('fr-FR')}
+                    #{openTicket.id.slice(0, 8)} &middot; {openTicket.createdAt.toLocaleDateString(localeTag)}
                   </p>
                 </div>
-                <span className={`text-xs font-semibold px-3 py-1 rounded-full ${STATUS_LABELS[openTicket.status].color}`}>
-                  {STATUS_LABELS[openTicket.status].label}
+                <span className={`text-xs font-semibold px-3 py-1 rounded-full ${statusLabels[openTicket.status].color}`}>
+                  {statusLabels[openTicket.status].label}
                 </span>
               </div>
 
@@ -222,7 +224,7 @@ export default function SupportPage() {
                         : 'bg-white/10 text-gray-200 rounded-bl-md'
                     }`}>
                       <p className="text-xs text-gray-500 mb-1">
-                        {msg.sender === 'admin' ? 'Support' : 'Vous'} &middot; {msg.createdAt.toLocaleString('fr-FR')}
+                        {msg.sender === 'admin' ? t('Support', 'Support') : t('Vous', 'You')} &middot; {msg.createdAt.toLocaleString(localeTag)}
                       </p>
                       <p className="whitespace-pre-wrap">{msg.text}</p>
                     </div>
@@ -235,7 +237,7 @@ export default function SupportPage() {
                 <div className="flex gap-2">
                   <textarea
                     className="input-field flex-1"
-                    placeholder="Votre reponse..."
+                    placeholder={t('Votre reponse...', 'Your reply...')}
                     value={reply}
                     onChange={(e) => setReply(e.target.value)}
                     rows={2}
@@ -245,11 +247,11 @@ export default function SupportPage() {
                     disabled={sending || !reply.trim()}
                     className="btn-primary px-6 self-end disabled:opacity-50"
                   >
-                    {sending ? '...' : 'Envoyer'}
+                    {sending ? '...' : t('Envoyer', 'Send')}
                   </button>
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 text-center py-2">Ce ticket est ferme.</p>
+                <p className="text-sm text-gray-500 text-center py-2">{t('Ce ticket est ferme.', 'This ticket is closed.')}</p>
               )}
             </div>
           </motion.div>
@@ -257,23 +259,23 @@ export default function SupportPage() {
           <>
             {/* Formulaire nouveau ticket */}
             <section className="card p-6">
-              <h2 className="text-xl font-semibold mb-4">Nouveau ticket</h2>
+              <h2 className="text-xl font-semibold mb-4">{t('Nouveau ticket', 'New ticket')}</h2>
               <form onSubmit={handleCreateTicket} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">Sujet *</label>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">{t('Sujet *', 'Subject *')}</label>
                   <input
                     className="input-field"
-                    placeholder="Ex: Probleme avec ma commande..."
+                    placeholder={t('Ex: Probleme avec ma commande...', 'e.g. Issue with my order...')}
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     required
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">Message *</label>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">{t('Message *', 'Message *')}</label>
                   <textarea
                     className="input-field"
-                    placeholder="Decrivez votre probleme en detail..."
+                    placeholder={t('Decrivez votre probleme en detail...', 'Describe your issue in detail...')}
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     rows={4}
@@ -281,24 +283,28 @@ export default function SupportPage() {
                   />
                 </div>
                 <button type="submit" disabled={creating} className="btn-primary disabled:opacity-50">
-                  {creating ? 'Creation...' : 'Creer le ticket'}
+                  {creating ? t('Creation...', 'Creating...') : t('Creer le ticket', 'Create ticket')}
                 </button>
               </form>
             </section>
 
             {/* Liste des tickets */}
             <section className="card p-6">
-              <h2 className="text-xl font-semibold mb-4">Mes tickets ({tickets.length})</h2>
+              <h2 className="text-xl font-semibold mb-4">{t('Mes tickets', 'My tickets')} ({tickets.length})</h2>
               {tickets.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-500 mb-4">Vous n&apos;avez aucun ticket.</p>
-                  <p className="text-sm text-gray-600">Utilisez le formulaire ci-dessus pour contacter notre equipe.</p>
+                  <p className="text-gray-500 mb-4">{t("Vous n'avez aucun ticket.", 'You have no tickets.')}</p>
+                  <p className="text-sm text-gray-600">{t('Utilisez le formulaire ci-dessus pour contacter notre equipe.', 'Use the form above to contact our team.')}</p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-3">
                   {tickets.map((ticket) => {
                     const lastMsg = ticket.messages[ticket.messages.length - 1]
-                    const hasAdminReply = ticket.messages.some((m) => m.sender === 'admin')
+                    const hasAdminReply = ticket.messages.some((msg) => msg.sender === 'admin')
+                    const messageCount = ticket.messages.length
+                    const messageLabel = messageCount === 1
+                      ? t('message', 'message')
+                      : t('messages', 'messages')
                     return (
                       <button
                         key={ticket.id}
@@ -310,19 +316,19 @@ export default function SupportPage() {
                             <p className="font-semibold truncate">{ticket.subject}</p>
                             {hasAdminReply && lastMsg?.sender === 'admin' && (
                               <span className="text-xs px-2 py-0.5 rounded-full bg-gold/20 text-gold shrink-0">
-                                Nouvelle reponse
+                                {t('Nouvelle reponse', 'New reply')}
                               </span>
                             )}
                           </div>
                           <p className="text-xs text-gray-500 truncate mt-1">
-                            {lastMsg?.text || 'Aucun message'}
+                            {lastMsg?.text || t('Aucun message', 'No message')}
                           </p>
                           <p className="text-xs text-gray-600 mt-1">
-                            {ticket.messages.length} message{ticket.messages.length > 1 ? 's' : ''} &middot; {ticket.updatedAt.toLocaleDateString('fr-FR')}
+                            {messageCount} {messageLabel} &middot; {ticket.updatedAt.toLocaleDateString(localeTag)}
                           </p>
                         </div>
-                        <span className={`text-xs font-semibold px-3 py-1 rounded-full shrink-0 ${STATUS_LABELS[ticket.status].color}`}>
-                          {STATUS_LABELS[ticket.status].label}
+                        <span className={`text-xs font-semibold px-3 py-1 rounded-full shrink-0 ${statusLabels[ticket.status].color}`}>
+                          {statusLabels[ticket.status].label}
                         </span>
                       </button>
                     )

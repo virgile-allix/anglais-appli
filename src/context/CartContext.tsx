@@ -1,10 +1,12 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import type { LocalizedText } from '@/lib/i18n'
 
 export type CartItem = {
   id: string
   name: string
+  nameI18n?: LocalizedText
   price: number
   quantity: number
   image?: string

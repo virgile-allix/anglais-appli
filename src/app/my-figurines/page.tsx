@@ -5,22 +5,24 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
+import { useI18n } from '@/context/LanguageContext'
 import { getUserFigurines, type CustomFigurine } from '@/lib/firestore'
-
-const statusLabels: Record<CustomFigurine['status'], { label: string; color: string }> = {
-  pending: { label: 'En attente', color: 'text-yellow-400 bg-yellow-400/10' },
-  generating: { label: 'Generation...', color: 'text-blue-400 bg-blue-400/10' },
-  texturing: { label: 'Texturation...', color: 'text-purple-400 bg-purple-400/10' },
-  ready: { label: 'Prete', color: 'text-green-400 bg-green-400/10' },
-  failed: { label: 'Echouee', color: 'text-red-400 bg-red-400/10' },
-}
 
 export default function MyFigurinesPage() {
   const { user, loading: authLoading } = useAuth()
+  const { t, localeTag } = useI18n()
   const router = useRouter()
 
   const [figurines, setFigurines] = useState<CustomFigurine[]>([])
   const [loading, setLoading] = useState(true)
+
+  const statusLabels: Record<CustomFigurine['status'], { label: string; color: string }> = {
+    pending: { label: t('En attente', 'Pending'), color: 'text-yellow-400 bg-yellow-400/10' },
+    generating: { label: t('Generation...', 'Generating...'), color: 'text-blue-400 bg-blue-400/10' },
+    texturing: { label: t('Texturation...', 'Texturing...'), color: 'text-purple-400 bg-purple-400/10' },
+    ready: { label: t('Prete', 'Ready'), color: 'text-green-400 bg-green-400/10' },
+    failed: { label: t('Echouee', 'Failed'), color: 'text-red-400 bg-red-400/10' },
+  }
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -53,14 +55,14 @@ export default function MyFigurinesPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
             <div>
               <h1 className="text-3xl font-bold">
-                Mes <span className="text-gold">Figurines</span>
+                {t('Mes', 'My')} <span className="text-gold">{t('Figurines', 'Figurines')}</span>
               </h1>
               <p className="text-gray-400 text-sm mt-1">
-                Retrouvez toutes vos creations personnalisees
+                {t('Retrouvez toutes vos creations personnalisees', 'Find all your custom creations')}
               </p>
             </div>
             <Link href="/create-figurine" className="btn-primary text-sm">
-              + Nouvelle figurine
+              {t('+ Nouvelle figurine', '+ New figurine')}
             </Link>
           </div>
 
@@ -72,10 +74,10 @@ export default function MyFigurinesPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold mb-2">Aucune figurine</h2>
-              <p className="text-gray-500 mb-6">Creez votre premiere figurine personnalisee !</p>
+              <h2 className="text-xl font-semibold mb-2">{t('Aucune figurine', 'No figurines')}</h2>
+              <p className="text-gray-500 mb-6">{t('Creez votre premiere figurine personnalisee !', 'Create your first custom figurine!')}</p>
               <Link href="/create-figurine" className="btn-primary">
-                Creer ma premiere figurine
+                {t('Creer ma premiere figurine', 'Create my first figurine')}
               </Link>
             </div>
           )}
@@ -126,7 +128,7 @@ export default function MyFigurinesPage() {
                         {figurine.description}
                       </p>
                       <p className="text-xs text-gray-600 mt-2">
-                        {figurine.createdAt.toLocaleDateString('fr-FR', {
+                        {figurine.createdAt.toLocaleDateString(localeTag, {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',

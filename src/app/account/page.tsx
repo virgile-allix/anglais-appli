@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
+import { useI18n } from '@/context/LanguageContext'
 import { getUserAddresses, saveUserAddresses, type Address } from '@/lib/firestore'
 
 const COOKIE_KEY = 'ps-cookie-consent'
@@ -22,6 +23,7 @@ const EMPTY_ADDRESS: Address = {
 
 export default function AccountPage() {
   const { user, profile, loading, logout } = useAuth()
+  const { t, localeTag } = useI18n()
   const router = useRouter()
 
   const [addresses, setAddresses] = useState<Address[]>([])
@@ -49,7 +51,7 @@ export default function AccountPage() {
   const handleSaveAddress = async () => {
     if (!user || !editingAddress) return
     if (!editingAddress.firstName.trim() || !editingAddress.lastName.trim() || !editingAddress.street.trim() || !editingAddress.city.trim() || !editingAddress.zip.trim()) {
-      setAddressMsg('Veuillez remplir tous les champs obligatoires.')
+      setAddressMsg(t('Veuillez remplir tous les champs obligatoires.', 'Please fill in all required fields.'))
       return
     }
     setSavingAddress(true)
@@ -65,9 +67,9 @@ export default function AccountPage() {
       setAddresses(updated)
       setEditingAddress(null)
       setEditingIndex(null)
-      setAddressMsg('Adresse sauvegardee.')
+      setAddressMsg(t('Adresse sauvegardee.', 'Address saved.'))
     } catch {
-      setAddressMsg('Erreur lors de la sauvegarde.')
+      setAddressMsg(t('Erreur lors de la sauvegarde.', 'Error while saving.'))
     } finally {
       setSavingAddress(false)
     }
@@ -79,9 +81,9 @@ export default function AccountPage() {
     try {
       await saveUserAddresses(user.uid, updated)
       setAddresses(updated)
-      setAddressMsg('Adresse supprimee.')
+      setAddressMsg(t('Adresse supprimee.', 'Address deleted.'))
     } catch {
-      setAddressMsg('Erreur lors de la suppression.')
+      setAddressMsg(t('Erreur lors de la suppression.', 'Error while deleting.'))
     }
   }
 
@@ -100,13 +102,15 @@ export default function AccountPage() {
 
   if (!user) return null
 
+  const addressMsgIsError = addressMsg.toLowerCase().includes('erreur') || addressMsg.toLowerCase().includes('error')
+
   return (
     <div className="min-h-screen pt-24 pb-16 px-6">
       <div className="max-w-3xl mx-auto">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex items-center gap-3 mb-10">
             <h1 className="text-3xl font-bold">
-              Mon <span className="text-gold">Compte</span>
+              {t('Mon', 'My')} <span className="text-gold">{t('Compte', 'Account')}</span>
             </h1>
             {profile?.isAdmin && (
               <span className="text-xs font-bold px-3 py-1 rounded-full bg-gold/20 text-gold">
@@ -118,7 +122,7 @@ export default function AccountPage() {
           {/* Informations */}
           <div className="card p-6 mb-6">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-4">
-              Informations
+              {t('Informations', 'Information')}
             </h2>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
@@ -130,15 +134,15 @@ export default function AccountPage() {
                 <span className="text-xs text-gray-600 font-mono">{user.uid}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-500 text-sm">Role</span>
-                <span className="text-sm">{profile?.isAdmin ? 'Administrateur' : 'Client'}</span>
+                <span className="text-gray-500 text-sm">{t('Role', 'Role')}</span>
+                <span className="text-sm">{profile?.isAdmin ? t('Administrateur', 'Administrator') : t('Client', 'Customer')}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-500 text-sm">Inscrit le</span>
+                <span className="text-gray-500 text-sm">{t('Inscrit le', 'Joined on')}</span>
                 <span className="text-sm">
                   {profile?.createdAt
-                    ? profile.createdAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-                    : '\u2014'}
+                    ? profile.createdAt.toLocaleDateString(localeTag, { day: 'numeric', month: 'long', year: 'numeric' })
+                    : '—'}
                 </span>
               </div>
             </div>
@@ -148,20 +152,20 @@ export default function AccountPage() {
           <div className="card p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
-                Mes adresses
+                {t('Mes adresses', 'My addresses')}
               </h2>
               {!editingAddress && (
                 <button
                   onClick={() => { setEditingAddress({ ...EMPTY_ADDRESS }); setEditingIndex(null); setAddressMsg('') }}
                   className="text-xs text-gold hover:text-gold-light transition-colors"
                 >
-                  + Ajouter
+                  {t('+ Ajouter', '+ Add')}
                 </button>
               )}
             </div>
 
             {addressMsg && (
-              <p className={`text-xs mb-3 ${addressMsg.includes('Erreur') ? 'text-red-400' : 'text-green-400'}`}>
+              <p className={`text-xs mb-3 ${addressMsgIsError ? 'text-red-400' : 'text-green-400'}`}>
                 {addressMsg}
               </p>
             )}
@@ -170,61 +174,61 @@ export default function AccountPage() {
               <div className="flex flex-col gap-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-500">Label</label>
-                    <input className="input-field" placeholder="Ex: Domicile" value={editingAddress.label}
+                    <label className="text-xs text-gray-500">{t('Label', 'Label')}</label>
+                    <input className="input-field" placeholder={t('Ex: Domicile', 'e.g. Home')} value={editingAddress.label}
                       onChange={(e) => setEditingAddress({ ...editingAddress, label: e.target.value })} />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-500">Telephone</label>
-                    <input className="input-field" placeholder="06 12 34 56 78" value={editingAddress.phone}
+                    <label className="text-xs text-gray-500">{t('Telephone', 'Phone')}</label>
+                    <input className="input-field" placeholder={t('06 12 34 56 78', '+33 6 12 34 56 78')} value={editingAddress.phone}
                       onChange={(e) => setEditingAddress({ ...editingAddress, phone: e.target.value })} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-500">Prenom *</label>
+                    <label className="text-xs text-gray-500">{t('Prenom *', 'First name *')}</label>
                     <input className="input-field" value={editingAddress.firstName}
                       onChange={(e) => setEditingAddress({ ...editingAddress, firstName: e.target.value })} />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-500">Nom *</label>
+                    <label className="text-xs text-gray-500">{t('Nom *', 'Last name *')}</label>
                     <input className="input-field" value={editingAddress.lastName}
                       onChange={(e) => setEditingAddress({ ...editingAddress, lastName: e.target.value })} />
                   </div>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-500">Adresse *</label>
-                  <input className="input-field" placeholder="123 Rue Example" value={editingAddress.street}
+                  <label className="text-xs text-gray-500">{t('Adresse *', 'Address *')}</label>
+                  <input className="input-field" placeholder={t('123 Rue Example', '123 Example St')} value={editingAddress.street}
                     onChange={(e) => setEditingAddress({ ...editingAddress, street: e.target.value })} />
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-500">Code postal *</label>
+                    <label className="text-xs text-gray-500">{t('Code postal *', 'ZIP code *')}</label>
                     <input className="input-field" placeholder="75001" value={editingAddress.zip}
                       onChange={(e) => setEditingAddress({ ...editingAddress, zip: e.target.value })} />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-500">Ville *</label>
-                    <input className="input-field" placeholder="Paris" value={editingAddress.city}
+                    <label className="text-xs text-gray-500">{t('Ville *', 'City *')}</label>
+                    <input className="input-field" placeholder={t('Paris', 'Paris')} value={editingAddress.city}
                       onChange={(e) => setEditingAddress({ ...editingAddress, city: e.target.value })} />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-500">Pays</label>
+                    <label className="text-xs text-gray-500">{t('Pays', 'Country')}</label>
                     <input className="input-field" value={editingAddress.country}
                       onChange={(e) => setEditingAddress({ ...editingAddress, country: e.target.value })} />
                   </div>
                 </div>
                 <div className="flex gap-3 mt-2">
                   <button onClick={handleSaveAddress} disabled={savingAddress} className="btn-primary text-sm disabled:opacity-50">
-                    {savingAddress ? 'Sauvegarde...' : 'Sauvegarder'}
+                    {savingAddress ? t('Sauvegarde...', 'Saving...') : t('Sauvegarder', 'Save')}
                   </button>
                   <button onClick={() => { setEditingAddress(null); setEditingIndex(null) }} className="btn-outline text-sm">
-                    Annuler
+                    {t('Annuler', 'Cancel')}
                   </button>
                 </div>
               </div>
             ) : addresses.length === 0 ? (
-              <p className="text-sm text-gray-500">Aucune adresse enregistree.</p>
+              <p className="text-sm text-gray-500">{t('Aucune adresse enregistree.', 'No saved addresses.')}</p>
             ) : (
               <div className="flex flex-col gap-3">
                 {addresses.map((addr, i) => (
@@ -241,13 +245,13 @@ export default function AccountPage() {
                         onClick={() => { setEditingAddress({ ...addr }); setEditingIndex(i); setAddressMsg('') }}
                         className="text-xs text-gray-500 hover:text-gold transition-colors"
                       >
-                        Modifier
+                        {t('Modifier', 'Edit')}
                       </button>
                       <button
                         onClick={() => handleDeleteAddress(i)}
                         className="text-xs text-gray-500 hover:text-red-400 transition-colors"
                       >
-                        Supprimer
+                        {t('Supprimer', 'Delete')}
                       </button>
                     </div>
                   </div>
@@ -259,11 +263,13 @@ export default function AccountPage() {
           {/* Preferences cookies */}
           <div className="card p-6 mb-6">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-4">
-              Preferences cookies
+              {t('Preferences cookies', 'Cookie preferences')}
             </h2>
             <p className="text-xs text-gray-500 mb-4">
-              Ce site utilise uniquement des cookies fonctionnels (authentification, panier).
-              Aucun cookie publicitaire n&apos;est utilise.
+              {t(
+                "Ce site utilise uniquement des cookies fonctionnels (authentification, panier). Aucun cookie publicitaire n'est utilise.",
+                'This site only uses functional cookies (authentication, cart). No advertising cookies are used.'
+              )}
             </p>
             <div className="flex gap-3">
               <button
@@ -274,7 +280,7 @@ export default function AccountPage() {
                     : 'border-white/10 text-gray-500 hover:text-white'
                 }`}
               >
-                Cookies acceptes
+                {t('Cookies acceptes', 'Cookies accepted')}
               </button>
               <button
                 onClick={() => handleCookieChange('refused')}
@@ -284,12 +290,12 @@ export default function AccountPage() {
                     : 'border-white/10 text-gray-500 hover:text-white'
                 }`}
               >
-                Cookies refuses
+                {t('Cookies refuses', 'Cookies declined')}
               </button>
             </div>
             <p className="text-xs text-gray-600 mt-3">
               <Link href="/confidentialite" className="text-gold hover:text-gold-light transition-colors">
-                Voir la politique de confidentialite
+                {t('Voir la politique de confidentialite', 'View privacy policy')}
               </Link>
             </p>
           </div>
@@ -297,18 +303,18 @@ export default function AccountPage() {
           {/* Raccourcis */}
           <div className="card p-6 mb-6">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-4">
-              Raccourcis
+              {t('Raccourcis', 'Shortcuts')}
             </h2>
             <div className="flex flex-col gap-3">
               <Link href="/orders" className="flex items-center justify-between p-3 rounded-lg bg-dark-tertiary hover:bg-white/5 transition-colors">
-                <span className="text-sm">Mes commandes</span>
+                <span className="text-sm">{t('Mes commandes', 'My orders')}</span>
                 <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </Link>
               <Link href="/my-figurines" className="flex items-center justify-between p-3 rounded-lg bg-dark-tertiary hover:bg-white/5 transition-colors">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm">Mes figurines</span>
+                  <span className="text-sm">{t('Mes figurines', 'My figurines')}</span>
                   <span className="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded-full">3D</span>
                 </div>
                 <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -316,13 +322,13 @@ export default function AccountPage() {
                 </svg>
               </Link>
               <Link href="/support" className="flex items-center justify-between p-3 rounded-lg bg-dark-tertiary hover:bg-white/5 transition-colors">
-                <span className="text-sm">Support</span>
+                <span className="text-sm">{t('Support', 'Support')}</span>
                 <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </Link>
               <Link href="/shop" className="flex items-center justify-between p-3 rounded-lg bg-dark-tertiary hover:bg-white/5 transition-colors">
-                <span className="text-sm">Voir la boutique</span>
+                <span className="text-sm">{t('Voir la boutique', 'View the shop')}</span>
                 <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
@@ -331,7 +337,7 @@ export default function AccountPage() {
           </div>
 
           <button onClick={logout} className="btn-outline text-sm">
-            Se deconnecter
+            {t('Se deconnecter', 'Log out')}
           </button>
         </motion.div>
       </div>

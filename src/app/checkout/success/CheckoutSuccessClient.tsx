@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
 import { useCart, type CartItem } from '@/context/CartContext'
+import { useI18n } from '@/context/LanguageContext'
 import { createOrder, incrementPromoUsage, decrementStock, type Address } from '@/lib/firestore'
 import { apiFetch } from '@/lib/api'
 
@@ -14,6 +15,7 @@ export default function CheckoutSuccessClient() {
   const sessionId = searchParams.get('session_id')
   const { user } = useAuth()
   const { clearCart } = useCart()
+  const { t } = useI18n()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const processedRef = useRef(false)
 
@@ -78,7 +80,13 @@ export default function CheckoutSuccessClient() {
         // Save order in Firestore avec adresse de livraison
         await createOrder({
           uid: user.uid,
-          items: checkoutItems.map((i) => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
+          items: checkoutItems.map((i) => ({
+            id: i.id,
+            name: i.name,
+            nameI18n: i.nameI18n,
+            price: i.price,
+            quantity: i.quantity,
+          })),
           total: paidTotal,
           status: 'paid',
           paymentId: sessionId,
@@ -119,7 +127,7 @@ export default function CheckoutSuccessClient() {
         {status === 'loading' && (
           <>
             <div className="w-12 h-12 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-6" />
-            <p className="text-gray-400">Verification du paiement...</p>
+            <p className="text-gray-400">{t('Verification du paiement...', 'Verifying payment...')}</p>
           </>
         )}
 
@@ -130,11 +138,11 @@ export default function CheckoutSuccessClient() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold mb-3">Paiement confirme</h1>
-            <p className="text-gray-400 mb-8">Merci pour votre commande. Vous pouvez suivre son avancement depuis votre espace.</p>
+            <h1 className="text-2xl font-bold mb-3">{t('Paiement confirme', 'Payment confirmed')}</h1>
+            <p className="text-gray-400 mb-8">{t('Merci pour votre commande. Vous pouvez suivre son avancement depuis votre espace.', 'Thanks for your order. You can track progress from your account.')}</p>
             <div className="flex gap-3 justify-center">
-              <Link href="/orders" className="btn-primary">Mes commandes</Link>
-              <Link href="/shop" className="btn-outline">Continuer mes achats</Link>
+              <Link href="/orders" className="btn-primary">{t('Mes commandes', 'My orders')}</Link>
+              <Link href="/shop" className="btn-outline">{t('Continuer mes achats', 'Continue shopping')}</Link>
             </div>
           </>
         )}
@@ -146,9 +154,9 @@ export default function CheckoutSuccessClient() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold mb-3">Erreur de verification</h1>
-            <p className="text-gray-400 mb-8">Nous n&apos;avons pas pu confirmer votre paiement. Contactez le support si le montant a ete debite.</p>
-            <Link href="/cart" className="btn-outline">Retour au panier</Link>
+            <h1 className="text-2xl font-bold mb-3">{t('Erreur de verification', 'Verification error')}</h1>
+            <p className="text-gray-400 mb-8">{t("Nous n'avons pas pu confirmer votre paiement. Contactez le support si le montant a ete debite.", 'We could not confirm your payment. Contact support if you were charged.')}</p>
+            <Link href="/cart" className="btn-outline">{t('Retour au panier', 'Back to cart')}</Link>
           </>
         )}
       </motion.div>

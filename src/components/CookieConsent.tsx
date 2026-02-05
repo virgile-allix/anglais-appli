@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useI18n } from '@/context/LanguageContext'
 
 const COOKIE_KEY = 'ps-cookie-consent'
 
 export default function CookieConsent() {
   const [visible, setVisible] = useState(false)
+  const { t } = useI18n()
 
   useEffect(() => {
     try {
@@ -41,20 +43,22 @@ export default function CookieConsent() {
           <div className="max-w-4xl mx-auto bg-dark-secondary border border-white/10 rounded-2xl p-6 shadow-2xl">
             <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
               <div className="flex-1">
-                <h3 className="text-sm font-semibold text-white mb-1">Cookies & Vie privee</h3>
+                <h3 className="text-sm font-semibold text-white mb-1">
+                  {t('Cookies & Vie privee', 'Cookies & Privacy')}
+                </h3>
                 <p className="text-xs text-gray-400 leading-relaxed">
-                  Ce site utilise des cookies essentiels au fonctionnement du service (authentification, panier, preferences).
-                  Conformement au RGPD et a la loi Informatique et Libertes, nous respectons votre vie privee.
-                  Aucun cookie publicitaire ou de tracking tiers n&apos;est utilise.
-                  En continuant votre navigation, vous acceptez l&apos;utilisation de ces cookies fonctionnels.
+                  {t(
+                    "Ce site utilise des cookies essentiels au fonctionnement du service (authentification, panier, preferences). Conformement au RGPD et a la loi Informatique et Libertes, nous respectons votre vie privee. Aucun cookie publicitaire ou de tracking tiers n'est utilise. En continuant votre navigation, vous acceptez l'utilisation de ces cookies fonctionnels.",
+                    "This site uses essential cookies required for the service to work (authentication, cart, preferences). In accordance with GDPR, we respect your privacy. No advertising or third-party tracking cookies are used. By continuing to browse, you accept the use of these functional cookies."
+                  )}
                 </p>
                 <p className="text-xs text-gray-500 mt-2">
-                  Pour en savoir plus, consultez notre{' '}
+                  {t('Pour en savoir plus, consultez notre', 'Learn more in our')}{' '}
                   <Link
                     href="/confidentialite"
                     className="text-gold hover:text-gold-light transition-colors underline"
                   >
-                    politique de confidentialite
+                    {t('politique de confidentialite', 'privacy policy')}
                   </Link>.
                 </p>
               </div>
@@ -63,13 +67,13 @@ export default function CookieConsent() {
                   onClick={handleRefuse}
                   className="px-5 py-2.5 text-sm rounded-xl border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-colors"
                 >
-                  Refuser
+                  {t('Refuser', 'Decline')}
                 </button>
                 <button
                   onClick={handleAccept}
                   className="px-5 py-2.5 text-sm rounded-xl bg-gold text-dark font-semibold hover:bg-gold-light transition-colors"
                 >
-                  Accepter
+                  {t('Accepter', 'Accept')}
                 </button>
               </div>
             </div>

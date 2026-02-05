@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCart } from '@/context/CartContext'
+import { useI18n } from '@/context/LanguageContext'
 import { type Product } from '@/lib/firestore'
 import ProductViewer3D from './ProductViewer3D'
 
@@ -14,6 +15,7 @@ type Props = {
 
 export default function ProductModal({ product, onClose }: Props) {
   const { addItem, items: cartItems } = useCart()
+  const { t, pick } = useI18n()
   const [activeTab, setActiveTab] = useState<'image' | '3d'>('image')
   const [quantity, setQuantity] = useState(1)
 
@@ -34,6 +36,10 @@ export default function ProductModal({ product, onClose }: Props) {
 
   if (!product) return null
 
+  const productName = pick(product.nameI18n ?? product.name)
+  const productDescription = pick(product.descriptionI18n ?? product.description)
+  const productCategory = pick(product.categoryI18n ?? product.category)
+
   const inCart = cartItems.find((c) => c.id === product.id)?.quantity || 0
   const maxReached = inCart + quantity > product.stock
   const outOfStock = product.stock <= 0
@@ -43,7 +49,8 @@ export default function ProductModal({ product, onClose }: Props) {
     for (let i = 0; i < quantity; i++) {
       addItem({
         id: product.id,
-        name: product.name,
+        name: productName,
+        nameI18n: product.nameI18n,
         price: product.price,
         image: product.image,
       })
@@ -94,7 +101,7 @@ export default function ProductModal({ product, onClose }: Props) {
                         : 'bg-dark text-gray-400 hover:text-white'
                       }`}
                   >
-                    Image
+                    {t('Image', 'Image')}
                   </button>
                   <button
                     onClick={() => setActiveTab('3d')}
@@ -103,7 +110,7 @@ export default function ProductModal({ product, onClose }: Props) {
                         : 'bg-dark text-gray-400 hover:text-white'
                       }`}
                   >
-                    Vue 3D
+                    {t('Vue 3D', '3D View')}
                   </button>
                 </div>
               )}
@@ -117,7 +124,7 @@ export default function ProductModal({ product, onClose }: Props) {
                     {product.image ? (
                       <img
                         src={product.image}
-                        alt={product.name}
+                        alt={productName}
                         className="max-w-full max-h-full object-contain"
                       />
                     ) : (
@@ -126,7 +133,7 @@ export default function ProductModal({ product, onClose }: Props) {
                     {outOfStock && (
                       <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                         <span className="text-lg font-semibold text-red-400 bg-red-400/10 px-4 py-2 rounded-full">
-                          Sold Out
+                          {t('Rupture', 'Sold Out')}
                         </span>
                       </div>
                     )}
@@ -138,10 +145,10 @@ export default function ProductModal({ product, onClose }: Props) {
             {/* Right: Details */}
             <div className="w-full md:w-1/2 p-6 md:p-8 overflow-y-auto flex flex-col">
               {/* Category badge */}
-              <span className="text-xs text-gold uppercase tracking-wider mb-2">{product.category}</span>
+              <span className="text-xs text-gold uppercase tracking-wider mb-2">{productCategory}</span>
 
               {/* Title */}
-              <h2 className="text-2xl md:text-3xl font-bold mb-4">{product.name}</h2>
+              <h2 className="text-2xl md:text-3xl font-bold mb-4">{productName}</h2>
 
               {/* Price */}
               <p className="text-2xl font-bold text-gold mb-4">{product.price.toFixed(2)} &euro;</p>
@@ -149,19 +156,25 @@ export default function ProductModal({ product, onClose }: Props) {
               {/* Stock */}
               <div className="flex items-center gap-2 mb-6">
                 {outOfStock ? (
-                  <span className="text-sm text-red-400">Rupture de stock</span>
+                  <span className="text-sm text-red-400">{t('Rupture de stock', 'Out of stock')}</span>
                 ) : product.stock <= 5 ? (
-                  <span className="text-sm text-yellow-400">Plus que {product.stock} en stock</span>
+                  <span className="text-sm text-yellow-400">
+                    {t(`Plus que ${product.stock} en stock`, `Only ${product.stock} left`)}
+                  </span>
                 ) : (
-                  <span className="text-sm text-green-400">En stock ({product.stock})</span>
+                  <span className="text-sm text-green-400">
+                    {t(`En stock (${product.stock})`, `In stock (${product.stock})`)}
+                  </span>
                 )}
               </div>
 
               {/* Description */}
               <div className="mb-6 flex-1">
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-2">Description</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                  {t('Description', 'Description')}
+                </h3>
                 <p className="text-gray-300 text-sm leading-relaxed">
-                  {product.description || 'Aucune description disponible pour ce produit.'}
+                  {productDescription || t('Aucune description disponible pour ce produit.', 'No description available for this product.')}
                 </p>
               </div>
 
@@ -169,7 +182,7 @@ export default function ProductModal({ product, onClose }: Props) {
               {!outOfStock && (
                 <div className="flex flex-col gap-4 mt-auto">
                   <div className="flex items-center gap-4">
-                    <span className="text-sm text-gray-400">Quantite</span>
+                    <span className="text-sm text-gray-400">{t('Quantite', 'Quantity')}</span>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -187,7 +200,9 @@ export default function ProductModal({ product, onClose }: Props) {
                       </button>
                     </div>
                     {inCart > 0 && (
-                      <span className="text-xs text-gray-500">({inCart} dans panier)</span>
+                      <span className="text-xs text-gray-500">
+                        {t(`(${inCart} dans panier)`, `(${inCart} in cart)`)}
+                      </span>
                     )}
                   </div>
 
@@ -196,7 +211,7 @@ export default function ProductModal({ product, onClose }: Props) {
                     disabled={maxReached}
                     className="btn-primary w-full text-center disabled:opacity-50"
                   >
-                    {maxReached ? 'Stock maximum atteint' : 'Ajouter au panier'}
+                    {maxReached ? t('Stock maximum atteint', 'Max stock reached') : t('Ajouter au panier', 'Add to cart')}
                   </button>
                 </div>
               )}
@@ -207,7 +222,7 @@ export default function ProductModal({ product, onClose }: Props) {
                 onClick={onClose}
                 className="text-sm text-gray-500 hover:text-gold transition-colors mt-4 text-center"
               >
-                Voir la page complete &rarr;
+                {t('Voir la page complete', 'View full page')} &rarr;
               </Link>
             </div>
           </motion.div>

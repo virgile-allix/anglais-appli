@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useI18n } from '@/context/LanguageContext'
 
 // Import 3D dynamique (pas de SSR)
 const Scene = dynamic(() => import('@/components/Scene'), { ssr: false })
@@ -20,6 +21,7 @@ const stagger = {
 }
 
 export default function Home() {
+  const { t, locale } = useI18n()
   const scrollProgress = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -40,19 +42,59 @@ export default function Home() {
     return () => ctx.revert()
   }, [])
 
+  const features = locale === 'fr'
+    ? [
+        {
+          icon: '?',
+          title: 'Qualite Premium',
+          desc: 'Chaque produit est selectionne pour repondre aux standards les plus eleves.',
+        },
+        {
+          icon: '?',
+          title: 'Livraison Express',
+          desc: 'Recevez votre commande rapidement, ou que vous soyez.',
+        },
+        {
+          icon: '??',
+          title: 'Creation 3D',
+          desc: 'Creez votre propre figurine personnalisee grace a notre IA generative.',
+          highlight: true,
+          link: '/create-figurine',
+        },
+      ]
+    : [
+        {
+          icon: '?',
+          title: 'Premium Quality',
+          desc: 'Each product is selected to meet the highest standards.',
+        },
+        {
+          icon: '?',
+          title: 'Fast Shipping',
+          desc: 'Receive your order quickly, wherever you are.',
+        },
+        {
+          icon: '??',
+          title: '3D Creation',
+          desc: 'Create your own personalized figurine with our generative AI.',
+          highlight: true,
+          link: '/create-figurine',
+        },
+      ]
+
   return (
     <div ref={containerRef} className="relative">
-      {/* ─── Canvas 3D fixé en arrière-plan ─── */}
+      {/* Canvas 3D fixe en arriere-plan */}
       <div className="fixed inset-0 z-0">
         <Scene scrollProgress={scrollProgress} />
       </div>
 
-      {/* ─── Gradient overlay pour la lisibilité ─── */}
+      {/* Gradient overlay pour la lisibilite */}
       <div className="fixed inset-0 z-[1] pointer-events-none bg-gradient-to-b from-dark/30 via-transparent to-dark/80" />
 
-      {/* ─── Contenu scrollable par-dessus la scène 3D ─── */}
+      {/* Contenu scrollable par-dessus la scene 3D */}
       <div className="relative z-10">
-        {/* ── Section Hero ── */}
+        {/* Section Hero */}
         <section className="min-h-screen flex items-center justify-center px-6">
           <motion.div
             initial="hidden"
@@ -64,38 +106,40 @@ export default function Home() {
               variants={fadeUp}
               className="text-sm uppercase tracking-[0.3em] text-gold mb-4"
             >
-              Collection exclusive
+              {t('Collection exclusive', 'Exclusive collection')}
             </motion.p>
 
             <motion.h1
               variants={fadeUp}
               className="text-5xl md:text-7xl lg:text-8xl font-extrabold leading-tight mb-6"
             >
-              L&apos;excellence
+              {t("L'excellence", 'Excellence')}
               <br />
-              <span className="gradient-text">redéfinie</span>
+              <span className="gradient-text">{t('redefinie', 'redefined')}</span>
             </motion.h1>
 
             <motion.p
               variants={fadeUp}
               className="text-lg md:text-xl text-gray-400 mb-10 max-w-xl mx-auto"
             >
-              Découvrez des produits pensés pour ceux qui ne font aucun
-              compromis sur la qualité.
+              {t(
+                "Decouvrez des produits penses pour ceux qui ne font aucun compromis sur la qualite.",
+                'Discover products designed for those who never compromise on quality.'
+              )}
             </motion.p>
 
             <motion.div variants={fadeUp} className="flex gap-4 justify-center flex-wrap">
               <Link href="/shop" className="btn-primary">
-                Explorer la boutique
+                {t('Explorer la boutique', 'Explore the shop')}
               </Link>
               <a href="#features" className="btn-outline">
-                En savoir plus
+                {t('En savoir plus', 'Learn more')}
               </a>
             </motion.div>
           </motion.div>
         </section>
 
-        {/* ── Section Features ── */}
+        {/* Section Features */}
         <section id="features" className="min-h-screen flex items-center px-6 py-32">
           <div className="max-w-6xl mx-auto w-full">
             <motion.div
@@ -109,10 +153,14 @@ export default function Home() {
                 variants={fadeUp}
                 className="text-4xl md:text-5xl font-bold mb-4"
               >
-                Pourquoi <span className="text-gold">nous choisir</span>
+                {t('Pourquoi', 'Why')}{' '}
+                <span className="text-gold">{t('nous choisir', 'choose us')}</span>
               </motion.h2>
               <motion.p variants={fadeUp} className="text-gray-400 max-w-lg mx-auto">
-                Une expérience d&apos;achat pensée dans les moindres détails.
+                {t(
+                  "Une experience d'achat pensee dans les moindres details.",
+                  'A shopping experience designed down to the smallest details.'
+                )}
               </motion.p>
             </motion.div>
 
@@ -123,25 +171,7 @@ export default function Home() {
               variants={stagger}
               className="grid grid-cols-1 md:grid-cols-3 gap-8"
             >
-              {[
-                {
-                  icon: '◆',
-                  title: 'Qualité Premium',
-                  desc: 'Chaque produit est sélectionné pour répondre aux standards les plus élevés.',
-                },
-                {
-                  icon: '⚡',
-                  title: 'Livraison Express',
-                  desc: 'Recevez votre commande rapidement, où que vous soyez.',
-                },
-                {
-                  icon: '🎨',
-                  title: 'Création 3D',
-                  desc: 'Créez votre propre figurine personnalisée grâce à notre IA générative.',
-                  highlight: true,
-                  link: '/create-figurine',
-                },
-              ].map((feature) => (
+              {features.map((feature) => (
                 <motion.div
                   key={feature.title}
                   variants={fadeUp}
@@ -152,7 +182,7 @@ export default function Home() {
                   <p className="text-sm text-gray-500 mb-4">{feature.desc}</p>
                   {'link' in feature && feature.link && (
                     <Link href={feature.link} className="text-sm text-gold hover:text-gold-light transition-colors">
-                      Essayer maintenant &rarr;
+                      {t('Essayer maintenant', 'Try it now')} &rarr;
                     </Link>
                   )}
                 </motion.div>
@@ -161,7 +191,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── Section CTA finale ── */}
+        {/* Section CTA finale */}
         <section className="min-h-[60vh] flex items-center justify-center px-6 py-32">
           <motion.div
             initial="hidden"
@@ -174,13 +204,13 @@ export default function Home() {
               variants={fadeUp}
               className="text-4xl md:text-5xl font-bold mb-6"
             >
-              Prêt à découvrir
+              {t('Pret a decouvrir', 'Ready to discover')}
               <br />
-              <span className="text-gold">la différence</span> ?
+              <span className="text-gold">{t('la difference', 'the difference')}</span> ?
             </motion.h2>
             <motion.div variants={fadeUp}>
               <Link href="/shop" className="btn-primary text-lg">
-                Voir la collection
+                {t('Voir la collection', 'View the collection')}
               </Link>
             </motion.div>
           </motion.div>
