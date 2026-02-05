@@ -12,23 +12,23 @@ type LanguageContextValue = {
 const STORAGE_KEY = 'ps-locale'
 
 const LanguageContext = createContext<LanguageContextValue>({
-  locale: 'fr',
+  locale: 'en',
   setLocale: () => {},
   toggleLocale: () => {},
 })
 
 function normalizeLocale(value?: string | null): Locale {
-  if (!value) return 'fr'
+  if (!value) return 'en'
   const lower = value.toLowerCase()
-  if (lower.startsWith('en')) return 'en'
-  return 'fr'
+  if (lower.startsWith('fr')) return 'fr'
+  return 'en'
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>('fr')
+  const [locale, setLocaleState] = useState<Locale>('en')
 
   useEffect(() => {
-    let next: Locale = 'fr'
+    let next: Locale = 'en'
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
       if (stored === 'fr' || stored === 'en') {
