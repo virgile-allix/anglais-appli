@@ -61,7 +61,7 @@ export default function MentionsLegalesPage() {
           <h2 className="text-lg font-semibold mb-3">Cookies</h2>
           <p className="text-sm text-gray-400 leading-relaxed">
             {t(
-              'Ce site utilise des cookies essentiels au fonctionnement du service (authentification, panier, preferences utilisateur). Aucun cookie publicitaire ou de tracking tiers n'est utilise. Vous pouvez gerer vos preferences de cookies depuis votre profil ou via la banniere de consentement. Pour en savoir plus, consultez notre',
+              "Ce site utilise des cookies essentiels au fonctionnement du service (authentification, panier, preferences utilisateur). Aucun cookie publicitaire ou de tracking tiers n'est utilise. Vous pouvez gerer vos preferences de cookies depuis votre profil ou via la banniere de consentement. Pour en savoir plus, consultez notre",
               'This site uses essential cookies required for the service to function (authentication, cart, user preferences). No advertising or third-party tracking cookies are used. You can manage your cookie preferences from your profile or via the consent banner. To learn more, see our'
             )}{' '}
             <Link href="/confidentialite" className="text-gold hover:text-gold-light transition-colors">
@@ -74,7 +74,7 @@ export default function MentionsLegalesPage() {
           <h2 className="text-lg font-semibold mb-3">{t('Droit applicable', 'Governing law')}</h2>
           <p className="text-sm text-gray-400 leading-relaxed">
             {t(
-              'Les presentes mentions legales sont soumises au droit francais. En cas de litige, et apres tentative de recherche d'une solution amiable, competence est donnee aux tribunaux francais competents.',
+              "Les presentes mentions legales sont soumises au droit francais. En cas de litige, et apres tentative de recherche d'une solution amiable, competence est donnee aux tribunaux francais competents.",
               'These legal notices are governed by French law. In case of dispute, and after attempting to find an amicable solution, jurisdiction is given to the competent French courts.'
             )}
           </p>

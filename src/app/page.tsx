@@ -1,15 +1,11 @@
 'use client'
 
 import { useRef, useEffect } from 'react'
-import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useI18n } from '@/context/LanguageContext'
-
-// Import 3D dynamique (pas de SSR)
-const Scene = dynamic(() => import('@/components/Scene'), { ssr: false })
 
 const fadeUp = {
   hidden: { opacity: 0, y: 60 },
@@ -20,21 +16,69 @@ const stagger = {
   visible: { transition: { staggerChildren: 0.15 } },
 }
 
+// Golden particles data
+const PARTICLES = Array.from({ length: 25 }, (_, i) => ({
+  id: i,
+  left: `${5 + Math.random() * 90}%`,
+  delay: Math.random() * 10,
+  duration: 8 + Math.random() * 12,
+  size: 2 + Math.random() * 3,
+  opacity: 0.15 + Math.random() * 0.35,
+}))
+
 export default function Home() {
   const { t, locale } = useI18n()
-  const scrollProgress = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger)
 
     const ctx = gsap.context(() => {
-      ScrollTrigger.create({
-        trigger: containerRef.current,
-        start: 'top top',
-        end: 'bottom bottom',
-        onUpdate: (self) => {
-          scrollProgress.current = self.progress
+      // Hero mask text: scale up to reveal video
+      gsap.to('.hero-mask-text', {
+        scale: 20,
+        ease: 'power2.in',
+        scrollTrigger: {
+          trigger: '.hero-spacer',
+          start: 'top top',
+          end: '55% top',
+          scrub: 0.8,
+        },
+      })
+
+      // Mask overlay: fade out after text fills screen
+      gsap.to('.hero-mask-overlay', {
+        opacity: 0,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: '.hero-spacer',
+          start: '45% top',
+          end: '65% top',
+          scrub: true,
+        },
+      })
+
+      // Hero subtitle: fade out early
+      gsap.to('.hero-subtitle', {
+        opacity: 0,
+        y: -20,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: '.hero-spacer',
+          start: 'top top',
+          end: '12% top',
+          scrub: true,
+        },
+      })
+
+      // Scroll indicator: fade out
+      gsap.to('.home-scroll-indicator', {
+        opacity: 0,
+        scrollTrigger: {
+          trigger: '.hero-spacer',
+          start: '3% top',
+          end: '8% top',
+          scrub: true,
         },
       })
     }, containerRef)
@@ -42,106 +86,173 @@ export default function Home() {
     return () => ctx.revert()
   }, [])
 
-  const features = locale === 'fr'
-    ? [
-        {
-          icon: '?',
-          title: 'Qualite Premium',
-          desc: 'Chaque produit est selectionne pour repondre aux standards les plus eleves.',
-        },
-        {
-          icon: '?',
-          title: 'Livraison Express',
-          desc: 'Recevez votre commande rapidement, ou que vous soyez.',
-        },
-        {
-          icon: '??',
-          title: 'Creation 3D',
-          desc: 'Creez votre propre figurine personnalisee grace a notre IA generative.',
-          highlight: true,
-          link: '/create-figurine',
-        },
-      ]
-    : [
-        {
-          icon: '?',
-          title: 'Premium Quality',
-          desc: 'Each product is selected to meet the highest standards.',
-        },
-        {
-          icon: '?',
-          title: 'Fast Shipping',
-          desc: 'Receive your order quickly, wherever you are.',
-        },
-        {
-          icon: '??',
-          title: '3D Creation',
-          desc: 'Create your own personalized figurine with our generative AI.',
-          highlight: true,
-          link: '/create-figurine',
-        },
-      ]
+  const features =
+    locale === 'fr'
+      ? [
+          {
+            icon: '\u2726',
+            title: 'Qualite Premium',
+            desc: 'Chaque figurine est selectionnee pour repondre aux standards les plus eleves de detail et de finition.',
+          },
+          {
+            icon: '\u26A1',
+            title: 'Livraison Express',
+            desc: 'Recevez votre commande rapidement, ou que vous soyez en France.',
+          },
+          {
+            icon: '\uD83C\uDFA8',
+            title: 'Creation 3D',
+            desc: 'Creez votre propre figurine personnalisee grace a notre IA generative.',
+            highlight: true,
+            link: '/create-figurine',
+          },
+        ]
+      : [
+          {
+            icon: '\u2726',
+            title: 'Premium Quality',
+            desc: 'Each figurine is selected to meet the highest standards of detail and finish.',
+          },
+          {
+            icon: '\u26A1',
+            title: 'Fast Shipping',
+            desc: 'Receive your order quickly, wherever you are.',
+          },
+          {
+            icon: '\uD83C\uDFA8',
+            title: '3D Creation',
+            desc: 'Create your own personalized figurine with our generative AI.',
+            highlight: true,
+            link: '/create-figurine',
+          },
+        ]
 
   return (
-    <div ref={containerRef} className="relative">
-      {/* Canvas 3D fixe en arriere-plan */}
-      <div className="fixed inset-0 z-0">
-        <Scene scrollProgress={scrollProgress} />
+    <div ref={containerRef}>
+      {/* ===== FIXED VIDEO BACKGROUND ===== */}
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        className="fixed top-0 left-0 w-full h-full object-cover"
+        style={{ zIndex: 0 }}
+      >
+        <source src="/videos/home-bg.mp4" type="video/mp4" />
+      </video>
+
+      {/* Fixed subtle gradient */}
+      <div
+        className="fixed inset-0 pointer-events-none bg-gradient-to-b from-dark/10 via-transparent to-dark/40"
+        style={{ zIndex: 1 }}
+      />
+
+      {/* ===== TEXT MASK OVERLAY (video visible through text) ===== */}
+      <div
+        className="hero-mask-overlay fixed inset-0 bg-black flex items-center justify-center"
+        style={{ zIndex: 2, mixBlendMode: 'multiply' }}
+      >
+        <div className="hero-mask-text will-change-transform select-none">
+          <h1 className="text-white text-[13vw] md:text-[10vw] font-black leading-[0.85] tracking-tighter text-center">
+            {locale === 'fr' ? (
+              <>
+                L&apos;EXCELLENCE
+                <br />
+                <span className="text-[15vw] md:text-[12vw]">REDEFINIE</span>
+              </>
+            ) : (
+              <>
+                EXCELLENCE
+                <br />
+                <span className="text-[15vw] md:text-[12vw]">REDEFINED</span>
+              </>
+            )}
+          </h1>
+        </div>
       </div>
 
-      {/* Gradient overlay pour la lisibilite */}
-      <div className="fixed inset-0 z-[1] pointer-events-none bg-gradient-to-b from-dark/30 via-transparent to-dark/80" />
+      {/* Hero subtitle (above mask, fades early) */}
+      <div
+        className="hero-subtitle fixed inset-0 flex items-end justify-center pb-36 pointer-events-none"
+        style={{ zIndex: 3 }}
+      >
+        <motion.p
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.8 }}
+          className="text-gold text-xs sm:text-sm uppercase tracking-[0.3em]"
+        >
+          {t('Figurines premium', 'Premium figurines')}
+        </motion.p>
+      </div>
 
-      {/* Contenu scrollable par-dessus la scene 3D */}
-      <div className="relative z-10">
-        {/* Section Hero */}
-        <section className="min-h-screen flex items-center justify-center px-6">
+      {/* ===== GOLDEN PARTICLES ===== */}
+      <div
+        className="fixed inset-0 pointer-events-none overflow-hidden"
+        style={{ zIndex: 4 }}
+      >
+        {PARTICLES.map((p) => (
+          <div
+            key={p.id}
+            className="absolute rounded-full bg-gold particle-float"
+            style={
+              {
+                left: p.left,
+                bottom: '-10px',
+                width: p.size,
+                height: p.size,
+                '--p-o': p.opacity,
+                animationDelay: `${p.delay}s`,
+                animationDuration: `${p.duration}s`,
+              } as React.CSSProperties
+            }
+          />
+        ))}
+      </div>
+
+      {/* Scroll indicator */}
+      <div
+        className="home-scroll-indicator fixed bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+        style={{ zIndex: 5 }}
+      >
+        <motion.span
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.2 }}
+          className="text-[10px] text-gray-500 uppercase tracking-[0.25em]"
+        >
+          Scroll
+        </motion.span>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.4 }}
+          className="w-5 h-8 rounded-full border border-gold/30 flex justify-center pt-1.5"
+        >
           <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={stagger}
-            className="text-center max-w-3xl"
-          >
-            <motion.p
-              variants={fadeUp}
-              className="text-sm uppercase tracking-[0.3em] text-gold mb-4"
-            >
-              {t('Collection exclusive', 'Exclusive collection')}
-            </motion.p>
+            animate={{ y: [0, 8, 0] }}
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }}
+            className="w-1 h-1 rounded-full bg-gold"
+          />
+        </motion.div>
+      </div>
 
-            <motion.h1
-              variants={fadeUp}
-              className="text-5xl md:text-7xl lg:text-8xl font-extrabold leading-tight mb-6"
-            >
-              {t("L'excellence", 'Excellence')}
-              <br />
-              <span className="gradient-text">{t('redefinie', 'redefined')}</span>
-            </motion.h1>
-
-            <motion.p
-              variants={fadeUp}
-              className="text-lg md:text-xl text-gray-400 mb-10 max-w-xl mx-auto"
-            >
-              {t(
-                "Decouvrez des produits penses pour ceux qui ne font aucun compromis sur la qualite.",
-                'Discover products designed for those who never compromise on quality.'
-              )}
-            </motion.p>
-
-            <motion.div variants={fadeUp} className="flex gap-4 justify-center flex-wrap">
-              <Link href="/shop" className="btn-primary">
-                {t('Explorer la boutique', 'Explore the shop')}
-              </Link>
-              <a href="#features" className="btn-outline">
-                {t('En savoir plus', 'Learn more')}
-              </a>
-            </motion.div>
-          </motion.div>
-        </section>
+      {/* ===== SCROLLABLE CONTENT ===== */}
+      <div className="relative" style={{ zIndex: 10 }}>
+        {/* Hero spacer (scroll room for the mask animation) */}
+        <div className="hero-spacer" style={{ height: '250vh' }} />
 
         {/* Section Features */}
-        <section id="features" className="min-h-screen flex items-center px-6 py-32">
-          <div className="max-w-6xl mx-auto w-full">
+        <section
+          id="features"
+          className="relative min-h-screen px-6 py-32"
+        >
+          <div className="absolute inset-0 bg-dark/80 backdrop-blur-[2px]" />
+          <div className="relative z-10 max-w-6xl mx-auto w-full">
             <motion.div
               initial="hidden"
               whileInView="visible"
@@ -154,12 +265,17 @@ export default function Home() {
                 className="text-4xl md:text-5xl font-bold mb-4"
               >
                 {t('Pourquoi', 'Why')}{' '}
-                <span className="text-gold">{t('nous choisir', 'choose us')}</span>
+                <span className="text-gold">
+                  {t('nous choisir', 'choose us')}
+                </span>
               </motion.h2>
-              <motion.p variants={fadeUp} className="text-gray-400 max-w-lg mx-auto">
+              <motion.p
+                variants={fadeUp}
+                className="text-gray-400 max-w-lg mx-auto"
+              >
                 {t(
-                  "Une experience d'achat pensee dans les moindres details.",
-                  'A shopping experience designed down to the smallest details.'
+                  "Des figurines d'exception pour les collectionneurs exigeants.",
+                  'Exceptional figurines for discerning collectors.'
                 )}
               </motion.p>
             </motion.div>
@@ -175,13 +291,22 @@ export default function Home() {
                 <motion.div
                   key={feature.title}
                   variants={fadeUp}
-                  className={`card p-8 text-center ${'highlight' in feature && feature.highlight ? 'border-gold/30 bg-gold/5' : ''}`}
+                  className={`card p-8 text-center ${
+                    'highlight' in feature && feature.highlight
+                      ? 'border-gold/30 bg-gold/5'
+                      : ''
+                  }`}
                 >
                   <div className="text-3xl mb-4">{feature.icon}</div>
-                  <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
+                  <h3 className="text-lg font-semibold mb-2">
+                    {feature.title}
+                  </h3>
                   <p className="text-sm text-gray-500 mb-4">{feature.desc}</p>
                   {'link' in feature && feature.link && (
-                    <Link href={feature.link} className="text-sm text-gold hover:text-gold-light transition-colors">
+                    <Link
+                      href={feature.link}
+                      className="text-sm text-gold hover:text-gold-light transition-colors"
+                    >
                       {t('Essayer maintenant', 'Try it now')} &rarr;
                     </Link>
                   )}
@@ -192,13 +317,14 @@ export default function Home() {
         </section>
 
         {/* Section CTA finale */}
-        <section className="min-h-[60vh] flex items-center justify-center px-6 py-32">
+        <section className="relative min-h-[60vh] flex items-center justify-center px-6 py-32">
+          <div className="absolute inset-0 bg-dark/50" />
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
             variants={stagger}
-            className="text-center max-w-2xl"
+            className="relative z-10 text-center max-w-2xl"
           >
             <motion.h2
               variants={fadeUp}
@@ -206,7 +332,10 @@ export default function Home() {
             >
               {t('Pret a decouvrir', 'Ready to discover')}
               <br />
-              <span className="text-gold">{t('la difference', 'the difference')}</span> ?
+              <span className="text-gold">
+                {t('la difference', 'the difference')}
+              </span>{' '}
+              ?
             </motion.h2>
             <motion.div variants={fadeUp}>
               <Link href="/shop" className="btn-primary text-lg">

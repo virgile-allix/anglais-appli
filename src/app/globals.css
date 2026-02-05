@@ -73,3 +73,28 @@
     @apply bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent;
   }
 }
+
+/* Golden floating particles */
+@keyframes particle-float {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  8% {
+    opacity: var(--p-o, 0.3);
+  }
+  50% {
+    transform: translateY(-50vh) translateX(18px);
+  }
+  88% {
+    opacity: var(--p-o, 0.3);
+  }
+  100% {
+    transform: translateY(-105vh) translateX(-8px);
+    opacity: 0;
+  }
+}
+
+.particle-float {
+  animation: particle-float linear infinite;
+}
