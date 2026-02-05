@@ -84,7 +84,7 @@ export default function MentionsLegalesPage() {
           <h2 className="text-lg font-semibold mb-3">{t('Contact', 'Contact')}</h2>
           <p className="text-sm text-gray-400 leading-relaxed">
             {t(
-              'Pour toute question concernant ces mentions legales, vous pouvez nous contacter a l'adresse email :',
+              "Pour toute question concernant ces mentions legales, vous pouvez nous contacter a l'adresse email :",
               'For any question regarding these legal notices, you can contact us at:'
             )} <span className="text-gold">support@premiumstore.fr</span> {t('ou via notre', 'or via our')}{' '}
             <Link href="/support" className="text-gold hover:text-gold-light transition-colors">
