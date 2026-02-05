@@ -474,7 +474,7 @@ export default function AdminPage() {
     setSuccess('')
     try {
       const token = await user.getIdToken()
-      const result = await apiFetch('/translate/products', {
+      const result = await apiFetch<{ updated: number; total: number }>('/translate/products', {
         method: 'POST',
         body: { overwrite: translateOverwrite },
         token,
