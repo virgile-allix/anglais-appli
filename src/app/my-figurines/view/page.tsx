@@ -116,26 +116,30 @@ function FigurineDetailContent() {
     }
   }, [])
 
-  // Polling du statut Meshy via l'API Express (2 phases: preview puis refine)
+  // Polling du statut Meshy via l'API Express (2 phases: preview puis refine pour text, direct pour image)
   const checkMeshyStatus = useCallback(async () => {
     if (!figurine) return
 
+    const isImageMode = figurine.generationMode === 'image'
     const isTexturing = figurine.status === 'texturing' && figurine.refineTaskId
     const taskIdToPoll = isTexturing ? figurine.refineTaskId : figurine.meshyTaskId
 
     if (!taskIdToPoll) return
 
     try {
+      // Pour les figurines generees a partir d'images, utiliser le type 'image'
+      const statusType = isImageMode && !isTexturing ? 'image' : 'text'
       const data = await apiFetch<{
         status: string
         progress: number
         modelUrl: string | null
         thumbnailUrl: string | null
-      }>(`/meshy/status/${taskIdToPoll}`)
+      }>(`/meshy/status/${taskIdToPoll}?type=${statusType}`)
 
       if (data.status === 'SUCCEEDED') {
-        if (isTexturing) {
-          // Refine termine -> modele texture final pret
+        if (isTexturing || isImageMode) {
+          // Image mode: directement pret (pas d'etape refine)
+          // Text mode refine: modele texture final pret
           const modelUrl = data.modelUrl || ''
           const thumbnailUrl = data.thumbnailUrl || ''
           await updateFigurine(figurine.id, {
@@ -151,7 +155,7 @@ function FigurineDetailContent() {
           } : null)
           setPollingActive(false)
         } else {
-          // Preview termine -> lancer le refine automatiquement
+          // Text mode preview termine -> lancer le refine automatiquement
           if (!refineTriggeredRef.current) {
             refineTriggeredRef.current = true
             await triggerRefine(figurine, data.thumbnailUrl)
@@ -301,6 +305,22 @@ function FigurineDetailContent() {
               </h3>
               <span className="text-sm text-gold capitalize">{styleLabel}</span>
             </div>
+
+            {/* Image de reference (mode image) */}
+            {figurine.generationMode === 'image' && figurine.referenceImageUrl && (
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                  {t('Image de reference', 'Reference image')}
+                </h3>
+                <div className="w-32 h-32 rounded-lg overflow-hidden border border-white/10">
+                  <img
+                    src={figurine.referenceImageUrl}
+                    alt="Reference"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Couleurs */}
             {figurine.colors && figurine.colors.length > 0 && (

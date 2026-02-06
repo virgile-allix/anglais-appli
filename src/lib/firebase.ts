@@ -1,6 +1,7 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
 import { getAuth, type Auth } from 'firebase/auth'
 import { getFirestore, type Firestore } from 'firebase/firestore'
+import { getStorage, type FirebaseStorage } from 'firebase/storage'
 
 const DEFAULT_FIREBASE_CONFIG = {
   apiKey: 'AIzaSyBSUELIqc3wBs-n0fgD9DHMH-sr_m4aapM',
@@ -26,6 +27,7 @@ type FirebaseServices = {
   app: FirebaseApp
   auth: Auth
   db: Firestore
+  storage: FirebaseStorage
 }
 
 let cached: FirebaseServices | null = null
@@ -56,6 +58,7 @@ export function getFirebase(): FirebaseServices {
       app,
       auth: getAuth(app),
       db: getFirestore(app),
+      storage: getStorage(app),
     }
   }
 

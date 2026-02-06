@@ -502,6 +502,8 @@ export type CustomFigurine = {
   colors?: string[] // couleurs sélectionnées par le client
   customColorText?: string // précision couleur libre
   texturePrompt?: string // prompt de texturation envoyé à Meshy refine
+  generationMode?: 'text' | 'image' // mode de génération
+  referenceImageUrl?: string // URL de l'image de référence (mode image)
   createdAt: Date
   updatedAt: Date
 }
@@ -543,6 +545,8 @@ export async function getUserFigurines(uid: string): Promise<CustomFigurine[]> {
         colors: data.colors || [],
         customColorText: data.customColorText || '',
         texturePrompt: data.texturePrompt || '',
+        generationMode: data.generationMode || 'text',
+        referenceImageUrl: data.referenceImageUrl || '',
         createdAt: data.createdAt?.toDate?.() || new Date(),
         updatedAt: data.updatedAt?.toDate?.() || new Date(),
       }
@@ -573,6 +577,8 @@ export async function getFigurineById(id: string): Promise<CustomFigurine | null
       colors: data.colors || [],
       customColorText: data.customColorText || '',
       texturePrompt: data.texturePrompt || '',
+      generationMode: data.generationMode || 'text',
+      referenceImageUrl: data.referenceImageUrl || '',
       createdAt: data.createdAt?.toDate?.() || new Date(),
       updatedAt: data.updatedAt?.toDate?.() || new Date(),
     }
