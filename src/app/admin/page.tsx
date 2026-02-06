@@ -31,19 +31,19 @@ import {
 } from '@/lib/firestore'
 
 const STATUS_OPTIONS: Order['status'][] = ['pending', 'paid', 'shipped', 'delivered']
-const STATUS_LABELS: Record<Order['status'], { label: string; color: string }> = {
-  pending: { label: 'En attente', color: 'text-yellow-400 bg-yellow-400/10' },
-  paid: { label: 'Payee', color: 'text-green-400 bg-green-400/10' },
-  shipped: { label: 'Expediee', color: 'text-blue-400 bg-blue-400/10' },
-  delivered: { label: 'Livree', color: 'text-gray-400 bg-gray-400/10' },
+const STATUS_LABELS: Record<Order['status'], { fr: string; en: string; color: string }> = {
+  pending: { fr: 'En attente', en: 'Pending', color: 'text-yellow-400 bg-yellow-400/10' },
+  paid: { fr: 'Payee', en: 'Paid', color: 'text-green-400 bg-green-400/10' },
+  shipped: { fr: 'Expediee', en: 'Shipped', color: 'text-blue-400 bg-blue-400/10' },
+  delivered: { fr: 'Livree', en: 'Delivered', color: 'text-gray-400 bg-gray-400/10' },
 }
 
 type Tab = 'dashboard' | 'products' | 'orders' | 'users' | 'promos' | 'support'
 
-const TICKET_STATUS_LABELS: Record<Ticket['status'], { label: string; color: string }> = {
-  open: { label: 'Ouvert', color: 'text-green-400 bg-green-400/10' },
-  in_progress: { label: 'En cours', color: 'text-yellow-400 bg-yellow-400/10' },
-  closed: { label: 'Ferme', color: 'text-gray-400 bg-gray-400/10' },
+const TICKET_STATUS_LABELS: Record<Ticket['status'], { fr: string; en: string; color: string }> = {
+  open: { fr: 'Ouvert', en: 'Open', color: 'text-green-400 bg-green-400/10' },
+  in_progress: { fr: 'En cours', en: 'In progress', color: 'text-yellow-400 bg-yellow-400/10' },
+  closed: { fr: 'Ferme', en: 'Closed', color: 'text-gray-400 bg-gray-400/10' },
 }
 const TICKET_STATUS_OPTIONS: Ticket['status'][] = ['open', 'in_progress', 'closed']
 
@@ -90,7 +90,7 @@ const EMPTY_PROMO: PromoForm = {
 export default function AdminPage() {
   const { user, profile, loading: authLoading } = useAuth()
   const router = useRouter()
-  const { t, pick, localeTag } = useI18n()
+  const { t, pick, localeTag, locale } = useI18n()
 
   const [products, setProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<Order[]>([])
@@ -118,6 +118,9 @@ export default function AdminPage() {
   const [translateOverwrite, setTranslateOverwrite] = useState(false)
 
   const isAdmin = Boolean(profile?.isAdmin)
+
+  const statusLabel = (status: Order['status']) => locale === 'fr' ? STATUS_LABELS[status].fr : STATUS_LABELS[status].en
+  const ticketStatusLabel = (status: Ticket['status']) => locale === 'fr' ? TICKET_STATUS_LABELS[status].fr : TICKET_STATUS_LABELS[status].en
 
   useEffect(() => {
     if (!error && !success) return
@@ -507,8 +510,8 @@ export default function AdminPage() {
     return (
       <div className="min-h-screen pt-24 pb-16 px-6 flex items-center justify-center">
         <div className="card p-8 text-center max-w-md">
-          <h1 className="text-2xl font-bold mb-3">Acces refuse</h1>
-          <p className="text-gray-500">Vous n&apos;avez pas les droits administrateur.</p>
+          <h1 className="text-2xl font-bold mb-3">{t('Acces refuse', 'Access denied')}</h1>
+          <p className="text-gray-500">{t('Vous n\'avez pas les droits administrateur.', 'You do not have administrator rights.')}</p>
         </div>
       </div>
     )
@@ -516,9 +519,9 @@ export default function AdminPage() {
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'dashboard', label: 'Dashboard' },
-    { key: 'products', label: `Produits (${products.length})` },
-    { key: 'orders', label: `Commandes (${orders.length})` },
-    { key: 'users', label: `Utilisateurs (${users.length})` },
+    { key: 'products', label: `${t('Produits', 'Products')} (${products.length})` },
+    { key: 'orders', label: `${t('Commandes', 'Orders')} (${orders.length})` },
+    { key: 'users', label: `${t('Utilisateurs', 'Users')} (${users.length})` },
     { key: 'promos', label: `Promos (${promoCodes.length})` },
     { key: 'support', label: `Support (${tickets.filter((t) => t.status !== 'closed').length})` },
   ]
@@ -528,8 +531,8 @@ export default function AdminPage() {
       <div className="max-w-6xl mx-auto flex flex-col gap-8">
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-3xl font-bold">Espace <span className="text-gold">Admin</span></h1>
-          <p className="text-gray-500 mt-1">Gerez votre boutique en ligne.</p>
+          <h1 className="text-3xl font-bold">{t('Espace', 'Admin')} <span className="text-gold">Admin</span></h1>
+          <p className="text-gray-500 mt-1">{t('Gerez votre boutique en ligne.', 'Manage your online store.')}</p>
         </motion.div>
 
         {/* Messages */}
@@ -571,31 +574,31 @@ export default function AdminPage() {
             {/* Stats principales */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="card p-5">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Revenu total</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">{t('Revenu total', 'Total revenue')}</p>
                 <p className="text-2xl font-bold text-gold mt-1">{stats.totalRevenue.toFixed(2)} &euro;</p>
               </div>
               <div className="card p-5">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Revenu aujourd&apos;hui</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">{t('Revenu aujourd\'hui', 'Today\'s revenue')}</p>
                 <p className="text-2xl font-bold text-gold mt-1">{stats.todayRevenue.toFixed(2)} &euro;</p>
               </div>
               <div className="card p-5">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Commandes du jour</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">{t('Commandes du jour', 'Today\'s orders')}</p>
                 <p className="text-2xl font-bold text-gold mt-1">{stats.todayOrders}</p>
               </div>
               <div className="card p-5">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Utilisateurs</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">{t('Utilisateurs', 'Users')}</p>
                 <p className="text-2xl font-bold text-gold mt-1">{stats.totalUsers}</p>
               </div>
             </div>
 
             {/* Stats commandes */}
             <div className="card p-6">
-              <h2 className="text-lg font-semibold mb-4">Commandes par statut</h2>
+              <h2 className="text-lg font-semibold mb-4">{t('Commandes par statut', 'Orders by status')}</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {STATUS_OPTIONS.map((status) => (
                   <div key={status} className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
                     <span className={`text-xs font-semibold px-2 py-1 rounded-full ${STATUS_LABELS[status].color}`}>
-                      {STATUS_LABELS[status].label}
+                      {statusLabel(status)}
                     </span>
                     <span className="text-lg font-bold">{stats.ordersByStatus[status]}</span>
                   </div>
@@ -606,15 +609,15 @@ export default function AdminPage() {
             {/* Stats produits */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="card p-5">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Produits en catalogue</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">{t('Produits en catalogue', 'Products in catalog')}</p>
                 <p className="text-2xl font-bold text-gold mt-1">{stats.totalProducts}</p>
               </div>
               <div className="card p-5">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Stock total</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">{t('Stock total', 'Total stock')}</p>
                 <p className="text-2xl font-bold text-gold mt-1">{stats.totalStock}</p>
               </div>
               <div className="card p-5">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">En rupture</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">{t('En rupture', 'Out of stock')}</p>
                 <p className={`text-2xl font-bold mt-1 ${stats.outOfStock > 0 ? 'text-red-400' : 'text-green-400'}`}>
                   {stats.outOfStock}
                 </p>
@@ -624,11 +627,11 @@ export default function AdminPage() {
             {/* Extras */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="card p-5">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Codes promo actifs</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">{t('Codes promo actifs', 'Active promo codes')}</p>
                 <p className="text-2xl font-bold text-gold mt-1">{stats.activePromos}</p>
               </div>
               <div className="card p-5">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Tickets ouverts</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">{t('Tickets ouverts', 'Open tickets')}</p>
                 <p className={`text-2xl font-bold mt-1 ${stats.openTickets > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
                   {stats.openTickets} <span className="text-sm text-gray-500 font-normal">/ {stats.totalTickets}</span>
                 </p>
@@ -638,14 +641,14 @@ export default function AdminPage() {
             {/* Dernières commandes */}
             {orders.length > 0 && (
               <div className="card p-6">
-                <h2 className="text-lg font-semibold mb-4">Dernieres commandes</h2>
+                <h2 className="text-lg font-semibold mb-4">{t('Dernieres commandes', 'Recent orders')}</h2>
                 <div className="flex flex-col gap-3">
                   {orders.slice(0, 5).map((order) => (
                     <div key={order.id} className="flex items-center justify-between text-sm border-b border-white/5 pb-2">
                       <div className="flex items-center gap-3">
                         <span className="font-mono text-gray-500">#{order.id.slice(0, 8)}</span>
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_LABELS[order.status].color}`}>
-                          {STATUS_LABELS[order.status].label}
+                          {statusLabel(order.status)}
                         </span>
                       </div>
                       <div className="flex items-center gap-4">
@@ -656,7 +659,7 @@ export default function AdminPage() {
                   ))}
                 </div>
                 <button onClick={() => setActiveTab('orders')} className="text-sm text-gold hover:text-gold-light mt-3 transition-colors">
-                  Voir toutes les commandes &rarr;
+                  {t('Voir toutes les commandes', 'View all orders')} &rarr;
                 </button>
               </div>
             )}
@@ -669,9 +672,9 @@ export default function AdminPage() {
             <section className="card p-6">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-semibold">Traduction automatique</h2>
+                  <h2 className="text-xl font-semibold">{t('Traduction automatique', 'Automatic translation')}</h2>
                   <p className="text-sm text-gray-500 mt-1">
-                    Ajoute automatiquement les versions EN des noms, descriptions et categories des produits.
+                    {t('Ajoute automatiquement les versions EN des noms, descriptions et categories des produits.', 'Automatically adds EN versions of product names, descriptions and categories.')}
                   </p>
                 </div>
                 <div className="flex flex-col gap-2">
@@ -682,14 +685,14 @@ export default function AdminPage() {
                       onChange={(e) => setTranslateOverwrite(e.target.checked)}
                       className="w-4 h-4 rounded border-gray-600 text-gold focus:ring-gold bg-dark-tertiary"
                     />
-                    Ecraser les traductions existantes
+                    {t('Ecraser les traductions existantes', 'Overwrite existing translations')}
                   </label>
                   <button
                     onClick={handleTranslateProducts}
                     disabled={translating}
                     className="btn-primary text-sm disabled:opacity-50"
                   >
-                    {translating ? 'Traduction en cours...' : 'Traduire tous les produits'}
+                    {translating ? t('Traduction en cours...', 'Translating...') : t('Traduire tous les produits', 'Translate all products')}
                   </button>
                 </div>
               </div>
@@ -698,9 +701,9 @@ export default function AdminPage() {
             {/* Formulaire */}
             <section className="card p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">{editingProductId ? 'Modifier le produit' : 'Creer un produit'}</h2>
+                <h2 className="text-xl font-semibold">{editingProductId ? t('Modifier le produit', 'Edit product') : t('Creer un produit', 'Create product')}</h2>
                 {editingProductId && (
-                  <button onClick={resetProductForm} className="text-sm text-gray-500 hover:text-white transition-colors">Annuler</button>
+                  <button onClick={resetProductForm} className="text-sm text-gray-500 hover:text-white transition-colors">{t('Annuler', 'Cancel')}</button>
                 )}
               </div>
               <form onSubmit={handleProductSubmit} className="grid gap-4 md:grid-cols-2">
@@ -715,7 +718,7 @@ export default function AdminPage() {
                     onChange={(e) => setProductForm((f) => ({ ...f, nameEn: e.target.value }))} />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">Prix (EUR) *</label>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">{t('Prix (EUR) *', 'Price (EUR) *')}</label>
                   <input className="input-field" placeholder="0.00" type="number" step="0.01" min="0"
                     value={productForm.price} onChange={(e) => setProductForm((f) => ({ ...f, price: e.target.value }))} required />
                 </div>
@@ -725,7 +728,7 @@ export default function AdminPage() {
                     onChange={(e) => setProductForm((f) => ({ ...f, stock: e.target.value }))} />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">Image URL</label>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">{t('Image URL', 'Image URL')}</label>
                   <input className="input-field" placeholder="https://..." value={productForm.image}
                     onChange={(e) => setProductForm((f) => ({ ...f, image: e.target.value }))} />
                 </div>
@@ -776,15 +779,15 @@ export default function AdminPage() {
 
             {/* Recherche */}
             <div className="flex gap-3">
-              <input className="input-field flex-1" placeholder="Rechercher un produit..." value={searchProduct}
+              <input className="input-field flex-1" placeholder={t('Rechercher un produit...', 'Search product...')} value={searchProduct}
                 onChange={(e) => setSearchProduct(e.target.value)} />
             </div>
 
             {/* Liste */}
             <section className="card p-6">
-              <h2 className="text-xl font-semibold mb-4">Tous les produits ({filteredProducts.length})</h2>
+              <h2 className="text-xl font-semibold mb-4">{t('Tous les produits', 'All products')} ({filteredProducts.length})</h2>
               {filteredProducts.length === 0 ? (
-                <p className="text-gray-500 text-sm py-8 text-center">Aucun produit trouve.</p>
+                <p className="text-gray-500 text-sm py-8 text-center">{t('Aucun produit trouve.', 'No product found.')}</p>
               ) : (
                 <div className="flex flex-col gap-4">
                   {filteredProducts.map((product) => (
@@ -818,10 +821,10 @@ export default function AdminPage() {
                         </div>
                       </div>
                       <div className="flex gap-2 shrink-0">
-                        <button onClick={() => startEditProduct(product)} className="btn-outline text-sm px-3">Modifier</button>
+                        <button onClick={() => startEditProduct(product)} className="btn-outline text-sm px-3">{t('Modifier', 'Edit')}</button>
                         <button onClick={() => handleDeleteProduct(product.id)}
                           className="text-sm px-3 py-2 rounded-lg border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-colors">
-                          Supprimer
+                          {t('Supprimer', 'Delete')}
                         </button>
                       </div>
                     </div>
@@ -837,21 +840,21 @@ export default function AdminPage() {
           <motion.div key="orders" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-6">
             {/* Filtres */}
             <div className="flex flex-col sm:flex-row gap-3">
-              <input className="input-field flex-1" placeholder="Rechercher (ID, UID, paiement)..."
+              <input className="input-field flex-1" placeholder={t('Rechercher (ID, UID, paiement)...', 'Search (ID, UID, payment)...')}
                 value={searchOrder} onChange={(e) => setSearchOrder(e.target.value)} />
               <select className="input-field w-auto" value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as Order['status'] | 'all')}>
-                <option value="all">Tous les statuts</option>
+                <option value="all">{t('Tous les statuts', 'All statuses')}</option>
                 {STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{STATUS_LABELS[s].label}</option>
+                  <option key={s} value={s}>{statusLabel(s)}</option>
                 ))}
               </select>
             </div>
 
             <section className="card p-6">
-              <h2 className="text-xl font-semibold mb-4">Commandes ({filteredOrders.length})</h2>
+              <h2 className="text-xl font-semibold mb-4">{t('Commandes', 'Orders')} ({filteredOrders.length})</h2>
               {filteredOrders.length === 0 ? (
-                <p className="text-gray-500 text-sm py-8 text-center">Aucune commande trouvee.</p>
+                <p className="text-gray-500 text-sm py-8 text-center">{t('Aucune commande trouvee.', 'No order found.')}</p>
               ) : (
                 <div className="flex flex-col gap-4">
                   {filteredOrders.map((order) => (
@@ -861,7 +864,7 @@ export default function AdminPage() {
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-mono text-gray-400">#{order.id.slice(0, 8)}</span>
                             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_LABELS[order.status].color}`}>
-                              {STATUS_LABELS[order.status].label}
+                              {statusLabel(order.status)}
                             </span>
                           </div>
                           <p className="text-xs text-gray-500 mt-1">{order.uid}</p>
@@ -872,7 +875,7 @@ export default function AdminPage() {
                           <select className="input-field text-sm" value={order.status}
                             onChange={(e) => handleStatusChange(order.id, e.target.value as Order['status'])}>
                             {STATUS_OPTIONS.map((s) => (
-                              <option key={s} value={s}>{STATUS_LABELS[s].label}</option>
+                              <option key={s} value={s}>{statusLabel(s)}</option>
                             ))}
                           </select>
                         </div>
@@ -897,9 +900,9 @@ export default function AdminPage() {
         {activeTab === 'users' && (
           <motion.div key="users" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
             <section className="card p-6">
-              <h2 className="text-xl font-semibold mb-4">Utilisateurs ({users.length})</h2>
+              <h2 className="text-xl font-semibold mb-4">{t('Utilisateurs', 'Users')} ({users.length})</h2>
               {users.length === 0 ? (
-                <p className="text-gray-500 text-sm py-8 text-center">Aucun utilisateur.</p>
+                <p className="text-gray-500 text-sm py-8 text-center">{t('Aucun utilisateur.', 'No user.')}</p>
               ) : (
                 <div className="flex flex-col gap-3">
                   {users.map((u) => (
@@ -907,11 +910,11 @@ export default function AdminPage() {
                       <div>
                         <p className="text-sm text-gray-200">{u.email || u.uid}</p>
                         <p className="text-xs text-gray-500 font-mono">{u.uid}</p>
-                        <p className="text-xs text-gray-600">Inscrit le {u.createdAt.toLocaleDateString(localeTag)}</p>
+                        <p className="text-xs text-gray-600">{t('Inscrit le', 'Registered on')} {u.createdAt.toLocaleDateString(localeTag)}</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className={`text-xs font-semibold px-3 py-1 rounded-full ${u.isAdmin ? 'bg-gold/20 text-gold' : 'bg-gray-500/20 text-gray-400'}`}>
-                          {u.isAdmin ? 'Admin' : 'Client'}
+                          {u.isAdmin ? 'Admin' : t('Client', 'Customer')}
                         </span>
                         {u.uid !== user?.uid && (
                           <button
@@ -922,7 +925,7 @@ export default function AdminPage() {
                                 : 'border border-gold/20 text-gold hover:bg-gold/10'
                             }`}
                           >
-                            {u.isAdmin ? 'Retirer admin' : 'Rendre admin'}
+                            {u.isAdmin ? t('Retirer admin', 'Remove admin') : t('Rendre admin', 'Make admin')}
                           </button>
                         )}
                       </div>
@@ -940,9 +943,9 @@ export default function AdminPage() {
             {/* Formulaire */}
             <section className="card p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">{editingPromoId ? 'Modifier le code' : 'Creer un code promo'}</h2>
+                <h2 className="text-xl font-semibold">{editingPromoId ? t('Modifier le code', 'Edit code') : t('Creer un code promo', 'Create promo code')}</h2>
                 {editingPromoId && (
-                  <button onClick={resetPromoForm} className="text-sm text-gray-500 hover:text-white transition-colors">Annuler</button>
+                  <button onClick={resetPromoForm} className="text-sm text-gray-500 hover:text-white transition-colors">{t('Annuler', 'Cancel')}</button>
                 )}
               </div>
               <form onSubmit={handlePromoSubmit} className="grid gap-4 md:grid-cols-2">
@@ -952,37 +955,37 @@ export default function AdminPage() {
                     onChange={(e) => setPromoForm((f) => ({ ...f, code: e.target.value }))} required />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">Reduction (%) *</label>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">{t('Reduction (%) *', 'Discount (%) *')}</label>
                   <input className="input-field" placeholder="10" type="number" min="1" max="100" value={promoForm.discount}
                     onChange={(e) => setPromoForm((f) => ({ ...f, discount: e.target.value }))} required />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">Limite d&apos;utilisation (0 = illimite)</label>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">{t('Limite d\'utilisation (0 = illimite)', 'Usage limit (0 = unlimited)')}</label>
                   <input className="input-field" placeholder="0" type="number" min="0" value={promoForm.usageLimit}
                     onChange={(e) => setPromoForm((f) => ({ ...f, usageLimit: e.target.value }))} />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">Statut</label>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">{t('Statut', 'Status')}</label>
                   <div className="input-field h-[42px] flex items-center">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={promoForm.active}
                         onChange={(e) => setPromoForm((f) => ({ ...f, active: e.target.checked }))}
                         className="w-4 h-4 rounded border-gray-600 text-gold focus:ring-gold bg-dark-tertiary" />
-                      <span className="text-sm">{promoForm.active ? 'Actif' : 'Inactif'}</span>
+                      <span className="text-sm">{promoForm.active ? t('Actif', 'Active') : t('Inactif', 'Inactive')}</span>
                     </label>
                   </div>
                 </div>
                 <button type="submit" disabled={saving} className="btn-primary md:col-span-2 disabled:opacity-50">
-                  {saving ? 'Sauvegarde...' : editingPromoId ? 'Mettre a jour' : 'Creer le code promo'}
+                  {saving ? t('Sauvegarde...', 'Saving...') : editingPromoId ? t('Mettre a jour', 'Update') : t('Creer le code promo', 'Create promo code')}
                 </button>
               </form>
             </section>
 
             {/* Liste */}
             <section className="card p-6">
-              <h2 className="text-xl font-semibold mb-4">Codes promo ({promoCodes.length})</h2>
+              <h2 className="text-xl font-semibold mb-4">{t('Codes promo', 'Promo codes')} ({promoCodes.length})</h2>
               {promoCodes.length === 0 ? (
-                <p className="text-gray-500 text-sm py-8 text-center">Aucun code promo.</p>
+                <p className="text-gray-500 text-sm py-8 text-center">{t('Aucun code promo.', 'No promo code.')}</p>
               ) : (
                 <div className="flex flex-col gap-4">
                   {promoCodes.map((promo) => (
@@ -993,22 +996,22 @@ export default function AdminPage() {
                         <div className="flex items-center gap-2">
                           <span className="font-mono font-bold text-gold">{promo.code}</span>
                           <span className={`text-xs px-2 py-0.5 rounded-full ${promo.active ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'}`}>
-                            {promo.active ? 'Actif' : 'Inactif'}
+                            {promo.active ? t('Actif', 'Active') : t('Inactif', 'Inactive')}
                           </span>
                         </div>
                         <p className="text-sm text-gray-500 mt-1">
-                          -{promo.discount}% &middot; {promo.usageCount}/{promo.usageLimit || '&infin;'} utilisations
+                          -{promo.discount}% &middot; {promo.usageCount}/{promo.usageLimit || '&infin;'} {t('utilisations', 'uses')}
                         </p>
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => handleTogglePromoActive(promo.id, promo.active)}
                           className="btn-outline text-sm px-3">
-                          {promo.active ? 'Desactiver' : 'Activer'}
+                          {promo.active ? t('Desactiver', 'Disable') : t('Activer', 'Enable')}
                         </button>
-                        <button onClick={() => startEditPromo(promo)} className="btn-outline text-sm px-3">Modifier</button>
+                        <button onClick={() => startEditPromo(promo)} className="btn-outline text-sm px-3">{t('Modifier', 'Edit')}</button>
                         <button onClick={() => handleDeletePromo(promo.id)}
                           className="text-sm px-3 py-2 rounded-lg border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-colors">
-                          Supprimer
+                          {t('Supprimer', 'Delete')}
                         </button>
                       </div>
                     </div>
@@ -1026,9 +1029,9 @@ export default function AdminPage() {
             <div className="flex gap-3">
               <select className="input-field w-auto" value={filterTicketStatus}
                 onChange={(e) => { setFilterTicketStatus(e.target.value as Ticket['status'] | 'all'); setOpenTicketId(null) }}>
-                <option value="all">Tous les tickets</option>
+                <option value="all">{t('Tous les tickets', 'All tickets')}</option>
                 {TICKET_STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{TICKET_STATUS_LABELS[s].label}</option>
+                  <option key={s} value={s}>{ticketStatusLabel(s)}</option>
                 ))}
               </select>
             </div>
@@ -1041,7 +1044,7 @@ export default function AdminPage() {
                 <div className="flex flex-col gap-4">
                   <button onClick={() => { setOpenTicketId(null); setTicketReply('') }}
                     className="text-sm text-gray-500 hover:text-white transition-colors self-start">
-                    &larr; Retour
+                    &larr; {t('Retour', 'Back')}
                   </button>
                   <div className="card p-6">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -1054,7 +1057,7 @@ export default function AdminPage() {
                       <select className="input-field text-sm w-auto" value={ticket.status}
                         onChange={(e) => handleTicketStatusChange(ticket.id, e.target.value as Ticket['status'])}>
                         {TICKET_STATUS_OPTIONS.map((s) => (
-                          <option key={s} value={s}>{TICKET_STATUS_LABELS[s].label}</option>
+                          <option key={s} value={s}>{ticketStatusLabel(s)}</option>
                         ))}
                       </select>
                     </div>
@@ -1069,7 +1072,7 @@ export default function AdminPage() {
                               : 'bg-white/10 text-gray-200 rounded-bl-md'
                           }`}>
                             <p className="text-xs text-gray-500 mb-1">
-                              {msg.sender === 'admin' ? 'Vous (Admin)' : msg.senderEmail || 'Client'} &middot; {msg.createdAt.toLocaleString(localeTag)}
+                              {msg.sender === 'admin' ? t('Vous (Admin)', 'You (Admin)') : msg.senderEmail || t('Client', 'Customer')} &middot; {msg.createdAt.toLocaleString(localeTag)}
                             </p>
                             <p className="whitespace-pre-wrap">{msg.text}</p>
                           </div>
@@ -1079,11 +1082,11 @@ export default function AdminPage() {
 
                     {/* Repondre */}
                     <div className="flex gap-2">
-                      <textarea className="input-field flex-1" placeholder="Votre reponse..." value={ticketReply}
+                      <textarea className="input-field flex-1" placeholder={t('Votre reponse...', 'Your reply...')} value={ticketReply}
                         onChange={(e) => setTicketReply(e.target.value)} rows={2} />
                       <button onClick={() => handleTicketReply(ticket.id)} disabled={sendingReply || !ticketReply.trim()}
                         className="btn-primary px-6 self-end disabled:opacity-50">
-                        {sendingReply ? '...' : 'Envoyer'}
+                        {sendingReply ? '...' : t('Envoyer', 'Send')}
                       </button>
                     </div>
                   </div>
@@ -1096,7 +1099,7 @@ export default function AdminPage() {
               <section className="card p-6">
                 <h2 className="text-xl font-semibold mb-4">Tickets ({filteredTickets.length})</h2>
                 {filteredTickets.length === 0 ? (
-                  <p className="text-gray-500 text-sm py-8 text-center">Aucun ticket.</p>
+                  <p className="text-gray-500 text-sm py-8 text-center">{t('Aucun ticket.', 'No ticket.')}</p>
                 ) : (
                   <div className="flex flex-col gap-3">
                     {filteredTickets.map((ticket) => {
@@ -1119,7 +1122,7 @@ export default function AdminPage() {
                             </p>
                           </div>
                           <span className={`text-xs font-semibold px-3 py-1 rounded-full shrink-0 ${TICKET_STATUS_LABELS[ticket.status].color}`}>
-                            {TICKET_STATUS_LABELS[ticket.status].label}
+                            {ticketStatusLabel(ticket.status)}
                           </span>
                         </button>
                       )
