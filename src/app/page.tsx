@@ -189,8 +189,8 @@ export default function Home() {
 
       {/* Hero logo (above text, centered) */}
       <div
-        className="hero-logo fixed inset-0 flex items-center justify-center pointer-events-none"
-        style={{ zIndex: 3, paddingBottom: '35vh' }}
+        className="hero-logo fixed inset-0 flex items-start justify-center pointer-events-none pt-24"
+        style={{ zIndex: 3 }}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
