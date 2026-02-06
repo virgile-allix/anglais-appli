@@ -2,10 +2,13 @@
 
 import { useRef, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useI18n } from '@/context/LanguageContext'
+
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
 const fadeUp = {
   hidden: { opacity: 0, y: 60 },
@@ -173,9 +176,24 @@ export default function Home() {
 
       {/* Hero subtitle (above mask, fades early) */}
       <div
-        className="hero-subtitle fixed inset-0 flex items-end justify-center pb-36 pointer-events-none"
+        className="hero-subtitle fixed inset-0 flex flex-col items-center justify-end pb-32 pointer-events-none"
         style={{ zIndex: 3 }}
       >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3, duration: 0.8 }}
+          className="mb-4"
+        >
+          <Image
+            src={`${basePath}/logo_sans_fond.png`}
+            alt="Premium Store"
+            width={200}
+            height={60}
+            className="h-14 sm:h-16 w-auto"
+            priority
+          />
+        </motion.div>
         <motion.p
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}

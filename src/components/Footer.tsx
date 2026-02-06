@@ -1,7 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useI18n } from '@/context/LanguageContext'
+
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
 export default function Footer() {
   const { t } = useI18n()
@@ -12,10 +15,15 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div>
-            <p className="text-xl font-bold mb-3">
-              <span className="text-gold">PREMIUM</span>{' '}
-              <span className="text-white">STORE</span>
-            </p>
+            <Link href="/" className="inline-block mb-3">
+              <Image
+                src={`${basePath}/logo_sans_fond.png`}
+                alt="Premium Store"
+                width={120}
+                height={35}
+                className="h-9 w-auto"
+              />
+            </Link>
             <p className="text-sm text-gray-500 leading-relaxed">
               {t("Des produits d'exception, une experience unique.", 'Exceptional products, a unique experience.')}
             </p>

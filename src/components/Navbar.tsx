@@ -2,10 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
 import { useCart } from '@/context/CartContext'
 import { useI18n } from '@/context/LanguageContext'
+
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
 export default function Navbar() {
   const { user, logout, profile } = useAuth()
@@ -43,9 +46,15 @@ export default function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 glass">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="text-xl font-bold tracking-tight">
-          <span className="text-gold">PREMIUM</span>
-          <span className="text-white ml-1">STORE</span>
+        <Link href="/" className="flex items-center">
+          <Image
+            src={`${basePath}/logo_sans_fond.png`}
+            alt="Premium Store"
+            width={140}
+            height={40}
+            className="h-10 w-auto"
+            priority
+          />
         </Link>
 
         {/* Desktop nav */}
