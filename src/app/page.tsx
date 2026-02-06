@@ -61,6 +61,19 @@ export default function Home() {
         },
       })
 
+      // Hero logo: fade out early
+      gsap.to('.hero-logo', {
+        opacity: 0,
+        y: -30,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: '.hero-spacer',
+          start: 'top top',
+          end: '15% top',
+          scrub: true,
+        },
+      })
+
       // Hero subtitle: fade out early
       gsap.to('.hero-subtitle', {
         opacity: 0,
@@ -174,26 +187,32 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Hero subtitle (above mask, fades early) */}
+      {/* Hero logo (above text, centered) */}
       <div
-        className="hero-subtitle fixed inset-0 flex flex-col items-center justify-end pb-32 pointer-events-none"
-        style={{ zIndex: 3 }}
+        className="hero-logo fixed inset-0 flex items-center justify-center pointer-events-none"
+        style={{ zIndex: 3, paddingBottom: '35vh' }}
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
+          initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3, duration: 0.8 }}
-          className="mb-4"
+          transition={{ delay: 0.2, duration: 1 }}
         >
           <Image
             src={`${basePath}/logo_sans_fond.png`}
             alt="Premium Store"
-            width={200}
-            height={60}
-            className="h-14 sm:h-16 w-auto"
+            width={400}
+            height={120}
+            className="h-28 sm:h-36 md:h-44 w-auto"
             priority
           />
         </motion.div>
+      </div>
+
+      {/* Hero subtitle (above mask, fades early) */}
+      <div
+        className="hero-subtitle fixed inset-0 flex items-end justify-center pb-36 pointer-events-none"
+        style={{ zIndex: 3 }}
+      >
         <motion.p
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}

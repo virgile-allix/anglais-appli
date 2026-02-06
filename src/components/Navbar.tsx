@@ -33,12 +33,30 @@ export default function Navbar() {
     { href: '/shop', label: t('Boutique', 'Shop') },
     { href: '/create-figurine', label: t('Creer ma figurine', 'Create my figurine'), highlight: true },
     ...(user ? [{ href: '/orders', label: t('Mes commandes', 'My orders') }, { href: '/support', label: t('Support', 'Support') }] : []),
-    ...(profile?.isAdmin ? [{ href: '/admin', label: 'Admin' }] : []),
+    ...(profile?.isAdmin ? [{ href: '/admin', label: t('Administration', 'Admin') }] : []),
   ]
 
+  const FlagGB = () => (
+    <svg className="w-5 h-4 rounded-sm" viewBox="0 0 60 40">
+      <rect fill="#012169" width="60" height="40"/>
+      <path d="M0,0 L60,40 M60,0 L0,40" stroke="#fff" strokeWidth="6"/>
+      <path d="M0,0 L60,40 M60,0 L0,40" stroke="#C8102E" strokeWidth="4"/>
+      <path d="M30,0 V40 M0,20 H60" stroke="#fff" strokeWidth="10"/>
+      <path d="M30,0 V40 M0,20 H60" stroke="#C8102E" strokeWidth="6"/>
+    </svg>
+  )
+
+  const FlagFR = () => (
+    <svg className="w-5 h-4 rounded-sm" viewBox="0 0 60 40">
+      <rect fill="#002395" width="20" height="40"/>
+      <rect fill="#fff" x="20" width="20" height="40"/>
+      <rect fill="#ED2939" x="40" width="20" height="40"/>
+    </svg>
+  )
+
   const languages = [
-    { code: 'en' as const, flag: '\uD83C\uDDEC\uD83C\uDDE7', label: 'EN' },
-    { code: 'fr' as const, flag: '\uD83C\uDDEB\uD83C\uDDF7', label: 'FR' },
+    { code: 'en' as const, flag: <FlagGB />, label: 'EN' },
+    { code: 'fr' as const, flag: <FlagFR />, label: 'FR' },
   ]
   const currentLang = languages.find((l) => l.code === locale) || languages[0]
 
@@ -82,7 +100,7 @@ export default function Navbar() {
               onClick={() => setLangOpen(!langOpen)}
               className="flex items-center gap-1.5 h-8 px-3 rounded-full border border-white/10 text-xs font-semibold text-gray-300 hover:text-white hover:border-white/20 transition-colors"
             >
-              <span>{currentLang.flag}</span>
+              {currentLang.flag}
               <span>{currentLang.label}</span>
               <svg className={`w-3 h-3 transition-transform ${langOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -107,7 +125,7 @@ export default function Navbar() {
                           : 'text-gray-300 hover:text-white hover:bg-white/5'
                       }`}
                     >
-                      <span>{lang.flag}</span>
+                      {lang.flag}
                       <span>{lang.label === 'EN' ? 'English' : 'Francais'}</span>
                     </button>
                   ))}
@@ -205,7 +223,7 @@ export default function Navbar() {
                         : 'text-gray-400 border border-white/10 hover:text-white'
                     }`}
                   >
-                    <span>{lang.flag}</span>
+                    {lang.flag}
                     <span>{lang.label}</span>
                   </button>
                 ))}
