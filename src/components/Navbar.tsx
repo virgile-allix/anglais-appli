@@ -10,6 +10,29 @@ import { useI18n } from '@/context/LanguageContext'
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
+const FlagGB = (
+  <svg className="w-5 h-4 rounded-sm" viewBox="0 0 60 40">
+    <rect fill="#012169" width="60" height="40"/>
+    <path d="M0,0 L60,40 M60,0 L0,40" stroke="#fff" strokeWidth="6"/>
+    <path d="M0,0 L60,40 M60,0 L0,40" stroke="#C8102E" strokeWidth="4"/>
+    <path d="M30,0 V40 M0,20 H60" stroke="#fff" strokeWidth="10"/>
+    <path d="M30,0 V40 M0,20 H60" stroke="#C8102E" strokeWidth="6"/>
+  </svg>
+)
+
+const FlagFR = (
+  <svg className="w-5 h-4 rounded-sm" viewBox="0 0 60 40">
+    <rect fill="#002395" width="20" height="40"/>
+    <rect fill="#fff" x="20" width="20" height="40"/>
+    <rect fill="#ED2939" x="40" width="20" height="40"/>
+  </svg>
+)
+
+const LANGUAGES = [
+  { code: 'en' as const, flag: FlagGB, label: 'EN' },
+  { code: 'fr' as const, flag: FlagFR, label: 'FR' },
+]
+
 export default function Navbar() {
   const { user, logout, profile } = useAuth()
   const { totalItems } = useCart()
@@ -36,29 +59,7 @@ export default function Navbar() {
     ...(profile?.isAdmin ? [{ href: '/admin', label: t('Administration', 'Admin') }] : []),
   ]
 
-  const FlagGB = () => (
-    <svg className="w-5 h-4 rounded-sm" viewBox="0 0 60 40">
-      <rect fill="#012169" width="60" height="40"/>
-      <path d="M0,0 L60,40 M60,0 L0,40" stroke="#fff" strokeWidth="6"/>
-      <path d="M0,0 L60,40 M60,0 L0,40" stroke="#C8102E" strokeWidth="4"/>
-      <path d="M30,0 V40 M0,20 H60" stroke="#fff" strokeWidth="10"/>
-      <path d="M30,0 V40 M0,20 H60" stroke="#C8102E" strokeWidth="6"/>
-    </svg>
-  )
-
-  const FlagFR = () => (
-    <svg className="w-5 h-4 rounded-sm" viewBox="0 0 60 40">
-      <rect fill="#002395" width="20" height="40"/>
-      <rect fill="#fff" x="20" width="20" height="40"/>
-      <rect fill="#ED2939" x="40" width="20" height="40"/>
-    </svg>
-  )
-
-  const languages = [
-    { code: 'en' as const, flag: <FlagGB />, label: 'EN' },
-    { code: 'fr' as const, flag: <FlagFR />, label: 'FR' },
-  ]
-  const currentLang = languages.find((l) => l.code === locale) || languages[0]
+  const currentLang = LANGUAGES.find((l) => l.code === locale) || LANGUAGES[0]
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass">
@@ -115,7 +116,7 @@ export default function Navbar() {
                   transition={{ duration: 0.15 }}
                   className="absolute right-0 mt-2 w-32 rounded-xl border border-white/10 bg-dark/95 backdrop-blur-md shadow-lg overflow-hidden"
                 >
-                  {languages.map((lang) => (
+                  {LANGUAGES.map((lang) => (
                     <button
                       key={lang.code}
                       onClick={() => { setLocale(lang.code); setLangOpen(false) }}
@@ -213,7 +214,7 @@ export default function Navbar() {
                 </Link>
               ))}
               <div className="flex gap-2">
-                {languages.map((lang) => (
+                {LANGUAGES.map((lang) => (
                   <button
                     key={lang.code}
                     onClick={() => { setLocale(lang.code); setMobileOpen(false) }}

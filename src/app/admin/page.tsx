@@ -148,7 +148,7 @@ export default function AdminPage() {
         setTickets(tk)
       })
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : 'Erreur chargement')
+        setError(err instanceof Error ? err.message : t('Erreur chargement', 'Loading error'))
       })
       .finally(() => setLoading(false))
   }, [authLoading, user, isAdmin, router])
@@ -273,9 +273,9 @@ export default function AdminPage() {
     const descriptionEn = productForm.descriptionEn.trim()
     const categoryFr = productForm.category.trim() || 'general'
     const categoryEn = productForm.categoryEn.trim() || categoryFr
-    if (!nameFr) { setError('Nom requis.'); return }
-    if (Number.isNaN(price) || price < 0) { setError('Prix invalide.'); return }
-    if (Number.isNaN(stock) || stock < 0) { setError('Stock invalide.'); return }
+    if (!nameFr) { setError(t('Nom requis.', 'Name required.')); return }
+    if (Number.isNaN(price) || price < 0) { setError(t('Prix invalide.', 'Invalid price.')); return }
+    if (Number.isNaN(stock) || stock < 0) { setError(t('Stock invalide.', 'Invalid stock.')); return }
 
     setSaving(true)
     const data = {
@@ -295,29 +295,29 @@ export default function AdminPage() {
       if (editingProductId) {
         await updateProduct(editingProductId, data)
         setProducts((prev) => prev.map((p) => (p.id === editingProductId ? { ...p, ...data } : p)))
-        setSuccess(`"${data.name}" mis a jour.`)
+        setSuccess(t(`"${data.name}" mis a jour.`, `"${data.name}" updated.`))
       } else {
         const id = await createProduct(data)
         setProducts((prev) => [{ id, ...data }, ...prev])
-        setSuccess(`"${data.name}" cree.`)
+        setSuccess(t(`"${data.name}" cree.`, `"${data.name}" created.`))
       }
       resetProductForm()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur produit')
+      setError(err instanceof Error ? err.message : t('Erreur produit', 'Product error'))
     } finally {
       setSaving(false)
     }
   }
 
   const handleDeleteProduct = async (id: string) => {
-    if (!confirm('Supprimer ce produit ?')) return
+    if (!confirm(t('Supprimer ce produit ?', 'Delete this product?'))) return
     try {
       await deleteProduct(id)
       setProducts((prev) => prev.filter((p) => p.id !== id))
       if (editingProductId === id) resetProductForm()
-      setSuccess('Produit supprime.')
+      setSuccess(t('Produit supprime.', 'Product deleted.'))
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur suppression')
+      setError(err instanceof Error ? err.message : t('Erreur suppression', 'Delete error'))
     }
   }
 
@@ -328,21 +328,23 @@ export default function AdminPage() {
       await updateOrderStatus(orderId, status)
       setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)))
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur commande')
+      setError(err instanceof Error ? err.message : t('Erreur commande', 'Order error'))
     }
   }
 
   /* ─── User admin toggle ─── */
 
   const handleToggleAdmin = async (uid: string, current: boolean) => {
-    const action = current ? 'retirer les droits admin' : 'donner les droits admin'
-    if (!confirm(`Voulez-vous ${action} a cet utilisateur ?`)) return
+    const action = current
+      ? t('retirer les droits admin', 'remove admin rights')
+      : t('donner les droits admin', 'grant admin rights')
+    if (!confirm(t(`Voulez-vous ${action} a cet utilisateur ?`, `Do you want to ${action} for this user?`))) return
     try {
       await setUserAdmin(uid, !current)
       setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, isAdmin: !current } : u)))
-      setSuccess(`Droits mis a jour.`)
+      setSuccess(t('Droits mis a jour.', 'Rights updated.'))
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur modification role')
+      setError(err instanceof Error ? err.message : t('Erreur modification role', 'Role update error'))
     }
   }
 
@@ -370,8 +372,8 @@ export default function AdminPage() {
 
     const discount = Number(promoForm.discount)
     const usageLimit = Number(promoForm.usageLimit)
-    if (!promoForm.code.trim()) { setError('Code requis.'); return }
-    if (Number.isNaN(discount) || discount <= 0 || discount > 100) { setError('Reduction entre 1 et 100%.'); return }
+    if (!promoForm.code.trim()) { setError(t('Code requis.', 'Code required.')); return }
+    if (Number.isNaN(discount) || discount <= 0 || discount > 100) { setError(t('Reduction entre 1 et 100%.', 'Discount must be between 1 and 100%.')); return }
 
     setSaving(true)
     const data = {
@@ -385,29 +387,29 @@ export default function AdminPage() {
       if (editingPromoId) {
         await updatePromoCode(editingPromoId, data)
         setPromoCodes((prev) => prev.map((p) => (p.id === editingPromoId ? { ...p, ...data } : p)))
-        setSuccess(`Code "${data.code}" mis a jour.`)
+        setSuccess(t(`Code "${data.code}" mis a jour.`, `Code "${data.code}" updated.`))
       } else {
         const id = await createPromoCode(data)
         setPromoCodes((prev) => [{ id, ...data, usageCount: 0, createdAt: new Date() }, ...prev])
-        setSuccess(`Code "${data.code}" cree.`)
+        setSuccess(t(`Code "${data.code}" cree.`, `Code "${data.code}" created.`))
       }
       resetPromoForm()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur promo')
+      setError(err instanceof Error ? err.message : t('Erreur promo', 'Promo error'))
     } finally {
       setSaving(false)
     }
   }
 
   const handleDeletePromo = async (id: string) => {
-    if (!confirm('Supprimer ce code promo ?')) return
+    if (!confirm(t('Supprimer ce code promo ?', 'Delete this promo code?'))) return
     try {
       await deletePromoCode(id)
       setPromoCodes((prev) => prev.filter((p) => p.id !== id))
       if (editingPromoId === id) resetPromoForm()
-      setSuccess('Code promo supprime.')
+      setSuccess(t('Code promo supprime.', 'Promo code deleted.'))
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur suppression promo')
+      setError(err instanceof Error ? err.message : t('Erreur suppression promo', 'Promo delete error'))
     }
   }
 
@@ -416,7 +418,7 @@ export default function AdminPage() {
       await updatePromoCode(id, { active: !current })
       setPromoCodes((prev) => prev.map((p) => (p.id === id ? { ...p, active: !current } : p)))
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur promo')
+      setError(err instanceof Error ? err.message : t('Erreur promo', 'Promo error'))
     }
   }
 
@@ -451,9 +453,9 @@ export default function AdminPage() {
         )
       )
       setTicketReply('')
-      setSuccess('Reponse envoyee.')
+      setSuccess(t('Reponse envoyee.', 'Reply sent.'))
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur envoi reponse')
+      setError(err instanceof Error ? err.message : t('Erreur envoi reponse', 'Reply error'))
     } finally {
       setSendingReply(false)
     }
@@ -464,7 +466,7 @@ export default function AdminPage() {
       await updateTicketStatus(ticketId, status)
       setTickets((prev) => prev.map((t) => (t.id === ticketId ? { ...t, status, updatedAt: new Date() } : t)))
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur statut ticket')
+      setError(err instanceof Error ? err.message : t('Erreur statut ticket', 'Ticket status error'))
     }
   }
 
@@ -483,12 +485,12 @@ export default function AdminPage() {
         token,
       })
       setSuccess(
-        `Traduction terminee: ${result.updated}/${result.total} produits mis a jour.`
+        t(`Traduction terminee: ${result.updated}/${result.total} produits mis a jour.`, `Translation complete: ${result.updated}/${result.total} products updated.`)
       )
       const refreshed = await getProducts()
       setProducts(refreshed)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur traduction')
+      setError(err instanceof Error ? err.message : t('Erreur traduction', 'Translation error'))
     } finally {
       setTranslating(false)
     }
@@ -531,7 +533,7 @@ export default function AdminPage() {
       <div className="max-w-6xl mx-auto flex flex-col gap-8">
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-3xl font-bold">{t('Espace', 'Admin')} <span className="text-gold">Admin</span></h1>
+          <h1 className="text-3xl font-bold">{t('Espace', 'Admin')} <span className="text-gold">{t('Admin', 'Panel')}</span></h1>
           <p className="text-gray-500 mt-1">{t('Gerez votre boutique en ligne.', 'Manage your online store.')}</p>
         </motion.div>
 
