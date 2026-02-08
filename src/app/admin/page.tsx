@@ -898,7 +898,7 @@ export default function AdminPage() {
                             {item.figurineId && (
                               <div className="flex items-center gap-3 mt-0.5">
                                 <a
-                                  href={`/my-figurines/view?id=${item.figurineId}`}
+                                  href={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/my-figurines/view?id=${item.figurineId}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300 transition-colors"
