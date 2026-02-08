@@ -66,6 +66,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems((prev) => {
       const existing = prev.find((i) => i.id === newItem.id)
       if (existing) {
+        // Les figurines sont uniques, on ne peut pas en commander plusieurs
+        if (existing.figurineId) {
+          return prev
+        }
         return prev.map((i) =>
           i.id === newItem.id ? { ...i, quantity: i.quantity + 1 } : i
         )
@@ -84,7 +88,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return
     }
     setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, quantity } : i))
+      prev.map((i) => {
+        if (i.id === id) {
+          // Les figurines sont uniques, quantite fixee a 1
+          if (i.figurineId) {
+            return i
+          }
+          return { ...i, quantity }
+        }
+        return i
+      })
     )
   }
 

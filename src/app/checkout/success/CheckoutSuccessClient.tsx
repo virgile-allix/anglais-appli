@@ -96,8 +96,9 @@ export default function CheckoutSuccessClient() {
           shippingAddress,
         })
 
-        // Decrementer le stock de chaque produit
+        // Decrementer le stock de chaque produit (sauf figurines personnalisees)
         for (const item of checkoutItems) {
+          if (item.figurineId) continue // Les figurines n'ont pas de stock
           try {
             await decrementStock(item.id, item.quantity)
           } catch {

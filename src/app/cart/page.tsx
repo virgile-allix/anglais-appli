@@ -69,6 +69,9 @@ export default function CartPage() {
 
       const removed: string[] = []
       for (const item of items) {
+        // Les figurines personnalisees n'ont pas de stock a verifier
+        if (item.figurineId) continue
+
         const product = products.find((p) => p.id === item.id)
         if (!product || product.stock <= 0) {
           removeItem(item.id)
@@ -237,8 +240,9 @@ export default function CartPage() {
         paymentMethod: 'paypal',
         shippingAddress: shippingAddress || undefined,
       })
-      // Decrementer le stock
+      // Decrementer le stock (sauf figurines personnalisees)
       for (const item of items) {
+        if (item.figurineId) continue // Les figurines n'ont pas de stock
         try {
           await decrementStock(item.id, item.quantity)
         } catch {
@@ -302,21 +306,32 @@ export default function CartPage() {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold truncate">{pick(item.nameI18n ?? item.name)}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold truncate">{pick(item.nameI18n ?? item.name)}</h3>
+                    {item.figurineId && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 whitespace-nowrap">
+                        {t('Figurine 3D', '3D Figurine')}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-gold text-sm">{item.price.toFixed(2)} &euro;</p>
-                  {atMax && maxStock !== Infinity && (
+                  {atMax && maxStock !== Infinity && !item.figurineId && (
                     <p className="text-xs text-yellow-400 mt-0.5">{t('Max : ', 'Max: ')}{maxStock}</p>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-8 h-8 rounded-lg bg-dark-tertiary text-gray-400 hover:text-white transition-colors flex items-center justify-center">-</button>
-                  <span className="w-8 text-center text-sm">{item.quantity}</span>
-                  <button
-                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                    disabled={atMax}
-                    className="w-8 h-8 rounded-lg bg-dark-tertiary text-gray-400 hover:text-white transition-colors flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
-                  >+</button>
-                </div>
+                {item.figurineId ? (
+                  <span className="text-sm text-gray-400 w-24 text-center">{t('Unique', 'Unique')}</span>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-8 h-8 rounded-lg bg-dark-tertiary text-gray-400 hover:text-white transition-colors flex items-center justify-center">-</button>
+                    <span className="w-8 text-center text-sm">{item.quantity}</span>
+                    <button
+                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      disabled={atMax}
+                      className="w-8 h-8 rounded-lg bg-dark-tertiary text-gray-400 hover:text-white transition-colors flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
+                    >+</button>
+                  </div>
+                )}
                 <p className="font-bold text-sm w-20 text-right">{(item.price * item.quantity).toFixed(2)} &euro;</p>
                 <button onClick={() => removeItem(item.id)} className="text-gray-600 hover:text-red-400 transition-colors">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
