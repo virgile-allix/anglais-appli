@@ -5,11 +5,15 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
+import { useCart } from '@/context/CartContext'
 import { useI18n } from '@/context/LanguageContext'
 import { getFigurineById, updateFigurine, deleteFigurine, type CustomFigurine } from '@/lib/firestore'
 import { apiFetch } from '@/lib/api'
 import ProductViewer3D from '@/components/ProductViewer3D'
 import { COLORS } from '@/lib/constants'
+
+// Prix fixe pour l'impression 3D d'une figurine personnalisee
+const FIGURINE_PRINT_PRICE = 49.99
 
 const COLOR_LABELS_EN: Record<string, string> = {
   rouge: 'Red',
@@ -38,12 +42,14 @@ function FigurineDetailContent() {
   const searchParams = useSearchParams()
   const figurineId = searchParams.get('id')
   const { user, loading: authLoading } = useAuth()
+  const { addItem } = useCart()
   const { t, locale, localeTag } = useI18n()
 
   const [figurine, setFigurine] = useState<CustomFigurine | null>(null)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
   const [pollingActive, setPollingActive] = useState(false)
+  const [addedToCart, setAddedToCart] = useState(false)
 
   const statusLabels: Record<CustomFigurine['status'], { label: string; color: string; bg: string }> = {
     pending: { label: t('En attente de generation', 'Waiting for generation'), color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
@@ -362,9 +368,37 @@ function FigurineDetailContent() {
             {/* Actions */}
             {figurine.status === 'ready' && (
               <div className="flex flex-col gap-4 mb-8">
-                <button className="btn-primary w-full text-center">
-                  {t('Commander cette figurine (impression 3D)', 'Order this figurine (3D print)')}
-                </button>
+                {addedToCart ? (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-center gap-2 text-green-400 py-3">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="font-medium">{t('Ajoute au panier !', 'Added to cart!')}</span>
+                    </div>
+                    <Link href="/cart" className="btn-primary w-full text-center">
+                      {t('Voir le panier', 'View cart')}
+                    </Link>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      addItem({
+                        id: `figurine-${figurine.id}`,
+                        name: figurine.name,
+                        nameI18n: { fr: figurine.name, en: figurine.name },
+                        price: FIGURINE_PRINT_PRICE,
+                        image: figurine.thumbnailUrl,
+                        figurineId: figurine.id,
+                        modelUrl: figurine.modelUrl,
+                      })
+                      setAddedToCart(true)
+                    }}
+                    className="btn-primary w-full text-center"
+                  >
+                    {t(`Commander cette figurine - ${FIGURINE_PRINT_PRICE.toFixed(2)} EUR`, `Order this figurine - ${FIGURINE_PRINT_PRICE.toFixed(2)} EUR`)}
+                  </button>
+                )}
               </div>
             )}
 

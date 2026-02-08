@@ -37,6 +37,9 @@ export type OrderItem = {
   nameI18n?: LocalizedText
   price: number
   quantity: number
+  // Figurine personnalisee
+  figurineId?: string
+  modelUrl?: string
 }
 
 export type Order = {

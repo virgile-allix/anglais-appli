@@ -10,6 +10,9 @@ export type CartItem = {
   price: number
   quantity: number
   image?: string
+  // Figurine personnalisee
+  figurineId?: string
+  modelUrl?: string
 }
 
 type CartContextType = {

@@ -86,6 +86,8 @@ export default function CheckoutSuccessClient() {
             nameI18n: i.nameI18n,
             price: i.price,
             quantity: i.quantity,
+            figurineId: i.figurineId,
+            modelUrl: i.modelUrl,
           })),
           total: paidTotal,
           status: 'paid',
