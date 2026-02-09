@@ -8,6 +8,7 @@ import { useCart } from '@/context/CartContext'
 import { useI18n } from '@/context/LanguageContext'
 import { getProductById, getProducts, type Product } from '@/lib/firestore'
 import ProductViewer3D from '@/components/ProductViewer3D'
+import Reviews from '@/components/Reviews'
 
 function ProductDetailContent() {
   const router = useRouter()
@@ -241,6 +242,11 @@ function ProductDetailContent() {
             </div>
           </motion.div>
         </div>
+
+        {/* Reviews */}
+        <section className="mt-16">
+          <Reviews productId={product.id} />
+        </section>
 
         {/* Related products */}
         {relatedProducts.length > 0 && (

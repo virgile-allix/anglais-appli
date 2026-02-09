@@ -606,6 +606,100 @@ export async function deleteFigurine(id: string): Promise<void> {
   await deleteDoc(doc(db, 'customFigurines', id))
 }
 
+/* ─── Avis produits ─── */
+
+export type Review = {
+  id: string
+  productId: string
+  uid: string
+  userEmail: string
+  rating: number // 1-5
+  comment: string
+  createdAt: Date
+}
+
+export async function getProductReviews(productId: string): Promise<Review[]> {
+  try {
+    const { db } = getFirebase()
+    const q = query(
+      collection(db, 'reviews'),
+      where('productId', '==', productId),
+      orderBy('createdAt', 'desc')
+    )
+    const snap = await getDocs(q)
+    return snap.docs.map((d) => {
+      const data = d.data()
+      return {
+        id: d.id,
+        productId: data.productId || '',
+        uid: data.uid || '',
+        userEmail: data.userEmail || '',
+        rating: data.rating || 5,
+        comment: data.comment || '',
+        createdAt: data.createdAt?.toDate?.() || new Date(),
+      }
+    })
+  } catch {
+    return []
+  }
+}
+
+export async function createReview(
+  review: Omit<Review, 'id' | 'createdAt'>
+): Promise<string> {
+  const { db } = getFirebase()
+  const docRef = await addDoc(collection(db, 'reviews'), {
+    ...review,
+    createdAt: Timestamp.now(),
+  })
+  return docRef.id
+}
+
+export async function getUserReviewForProduct(
+  uid: string,
+  productId: string
+): Promise<Review | null> {
+  try {
+    const { db } = getFirebase()
+    const q = query(
+      collection(db, 'reviews'),
+      where('uid', '==', uid),
+      where('productId', '==', productId)
+    )
+    const snap = await getDocs(q)
+    if (snap.empty) return null
+    const d = snap.docs[0]
+    const data = d.data()
+    return {
+      id: d.id,
+      productId: data.productId || '',
+      uid: data.uid || '',
+      userEmail: data.userEmail || '',
+      rating: data.rating || 5,
+      comment: data.comment || '',
+      createdAt: data.createdAt?.toDate?.() || new Date(),
+    }
+  } catch {
+    return null
+  }
+}
+
+export async function deleteReview(id: string): Promise<void> {
+  const { db } = getFirebase()
+  await deleteDoc(doc(db, 'reviews', id))
+}
+
+export async function getProductAverageRating(productId: string): Promise<{ average: number; count: number }> {
+  try {
+    const reviews = await getProductReviews(productId)
+    if (reviews.length === 0) return { average: 0, count: 0 }
+    const total = reviews.reduce((sum, r) => sum + r.rating, 0)
+    return { average: total / reviews.length, count: reviews.length }
+  } catch {
+    return { average: 0, count: 0 }
+  }
+}
+
 /* ─── Seed : peupler Firestore avec des produits de démo ─── */
 
 export async function seedProducts(): Promise<void> {

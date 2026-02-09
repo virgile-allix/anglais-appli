@@ -437,7 +437,7 @@ export default function Chatbot() {
                       {msg.links.map((link, idx) => (
                         <a
                           key={idx}
-                          href={link.url}
+                          href={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}${link.url}`}
                           className="text-xs px-3 py-1.5 rounded-full bg-gold/20 text-gold hover:bg-gold/30 transition-colors flex items-center gap-1"
                           onClick={() => setOpen(false)}
                         >
