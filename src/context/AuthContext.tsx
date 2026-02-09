@@ -14,6 +14,7 @@ import { getFirebase } from '@/lib/firebase'
 export type UserProfile = {
   uid: string
   email: string
+  displayName?: string
   isAdmin: boolean
   createdAt: Date
 }
@@ -23,8 +24,9 @@ type AuthContextType = {
   profile: UserProfile | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
-  register: (email: string, password: string) => Promise<void>
+  register: (email: string, password: string, displayName?: string) => Promise<void>
   logout: () => Promise<void>
+  refreshProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -34,6 +36,7 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   register: async () => {},
   logout: async () => {},
+  refreshProfile: async () => {},
 })
 
 async function loadProfile(uid: string): Promise<UserProfile | null> {
@@ -45,6 +48,7 @@ async function loadProfile(uid: string): Promise<UserProfile | null> {
     return {
       uid,
       email: data.email || '',
+      displayName: data.displayName || data.display_name,
       isAdmin: data.isAdmin || false,
       createdAt: data.createdAt?.toDate?.() || new Date(),
     }
@@ -53,17 +57,22 @@ async function loadProfile(uid: string): Promise<UserProfile | null> {
   }
 }
 
-async function saveProfile(user: User): Promise<UserProfile> {
+async function saveProfile(user: User, displayName?: string): Promise<UserProfile> {
   const { db } = getFirebase()
-  const profile: Omit<UserProfile, 'uid' | 'createdAt'> & { createdAt: ReturnType<typeof Timestamp.now> } = {
+  const profile: any = {
     email: user.email || '',
     isAdmin: false,
     createdAt: Timestamp.now(),
+  }
+  if (displayName) {
+    profile.displayName = displayName
+    profile.displayName_lower = displayName.toLowerCase().trim()
   }
   await setDoc(doc(db, 'users', user.uid), profile)
   return {
     uid: user.uid,
     email: profile.email,
+    displayName,
     isAdmin: false,
     createdAt: new Date(),
   }
@@ -108,11 +117,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const register = async (email: string, password: string) => {
+  const register = async (email: string, password: string, displayName?: string) => {
     const { auth } = getFirebase()
     const { user: u } = await createUserWithEmailAndPassword(auth, email, password)
     // Sauvegarder le profil en base
-    const newProfile = await saveProfile(u)
+    const newProfile = await saveProfile(u, displayName)
     setProfile(newProfile)
   }
 
@@ -122,8 +131,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null)
   }
 
+  const refreshProfile = async () => {
+    if (!user) return
+    const p = await loadProfile(user.uid)
+    setProfile(p)
+  }
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, profile, loading, login, register, logout, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )

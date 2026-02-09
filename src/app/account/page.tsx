@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
 import { useI18n } from '@/context/LanguageContext'
-import { getUserAddresses, saveUserAddresses, type Address } from '@/lib/firestore'
+import { getUserAddresses, saveUserAddresses, checkUsernameAvailability, updateUserDisplayName, type Address } from '@/lib/firestore'
 
 const COOKIE_KEY = 'ps-cookie-consent'
 
@@ -22,7 +22,7 @@ const EMPTY_ADDRESS: Address = {
 }
 
 export default function AccountPage() {
-  const { user, profile, loading, logout } = useAuth()
+  const { user, profile, loading, logout, refreshProfile } = useAuth()
   const { t, localeTag } = useI18n()
   const router = useRouter()
 
@@ -31,6 +31,11 @@ export default function AccountPage() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [savingAddress, setSavingAddress] = useState(false)
   const [addressMsg, setAddressMsg] = useState('')
+
+  const [editingDisplayName, setEditingDisplayName] = useState(false)
+  const [newDisplayName, setNewDisplayName] = useState('')
+  const [displayNameMsg, setDisplayNameMsg] = useState('')
+  const [savingDisplayName, setSavingDisplayName] = useState(false)
 
   const [cookieConsent, setCookieConsent] = useState<string | null>(null)
 
@@ -92,6 +97,52 @@ export default function AccountPage() {
     setCookieConsent(value)
   }
 
+  const handleSaveDisplayName = async () => {
+    if (!user) return
+
+    const trimmed = newDisplayName.trim()
+    if (trimmed.length < 3) {
+      setDisplayNameMsg(t('Le pseudo doit contenir au moins 3 caracteres.', 'Username must be at least 3 characters.'))
+      return
+    }
+    if (trimmed.length > 20) {
+      setDisplayNameMsg(t('Le pseudo ne peut pas depasser 20 caracteres.', 'Username cannot exceed 20 characters.'))
+      return
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(trimmed)) {
+      setDisplayNameMsg(t('Le pseudo ne peut contenir que des lettres, chiffres et underscores.', 'Username can only contain letters, numbers, and underscores.'))
+      return
+    }
+
+    // Check if same as current
+    if (trimmed === profile?.displayName) {
+      setEditingDisplayName(false)
+      setDisplayNameMsg('')
+      return
+    }
+
+    setSavingDisplayName(true)
+    setDisplayNameMsg('')
+    try {
+      // Check uniqueness
+      const isAvailable = await checkUsernameAvailability(trimmed)
+      if (!isAvailable) {
+        setDisplayNameMsg(t('Ce pseudo est deja pris.', 'This username is already taken.'))
+        setSavingDisplayName(false)
+        return
+      }
+
+      await updateUserDisplayName(user.uid, trimmed)
+      await refreshProfile()
+      setEditingDisplayName(false)
+      setDisplayNameMsg(t('Pseudo mis a jour.', 'Username updated.'))
+    } catch {
+      setDisplayNameMsg(t('Erreur lors de la mise a jour.', 'Error while updating.'))
+    } finally {
+      setSavingDisplayName(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen pt-24 pb-16 px-6">
@@ -138,11 +189,62 @@ export default function AccountPage() {
             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-4">
               {t('Informations', 'Information')}
             </h2>
+
+            {displayNameMsg && (
+              <p className={`text-xs mb-3 ${displayNameMsg.toLowerCase().includes('erreur') || displayNameMsg.toLowerCase().includes('error') || displayNameMsg.toLowerCase().includes('pris') || displayNameMsg.toLowerCase().includes('taken') ? 'text-red-400' : 'text-green-400'}`}>
+                {displayNameMsg}
+              </p>
+            )}
+
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-gray-500 text-sm">Email</span>
                 <span className="text-sm">{user.email}</span>
               </div>
+
+              {/* DisplayName */}
+              {editingDisplayName ? (
+                <div className="flex flex-col gap-2 p-3 rounded-lg bg-dark-tertiary">
+                  <label className="text-xs text-gray-500">{t('Nouveau pseudo', 'New username')}</label>
+                  <input
+                    type="text"
+                    value={newDisplayName}
+                    onChange={(e) => setNewDisplayName(e.target.value)}
+                    className="input-field text-sm"
+                    placeholder={profile?.displayName || t('MonPseudo', 'MyUsername')}
+                    maxLength={20}
+                  />
+                  <div className="flex gap-2 mt-1">
+                    <button
+                      onClick={handleSaveDisplayName}
+                      disabled={savingDisplayName}
+                      className="text-xs px-3 py-1.5 rounded bg-gold text-dark hover:bg-gold-light transition-colors disabled:opacity-50"
+                    >
+                      {savingDisplayName ? t('Sauvegarde...', 'Saving...') : t('Sauvegarder', 'Save')}
+                    </button>
+                    <button
+                      onClick={() => { setEditingDisplayName(false); setNewDisplayName(''); setDisplayNameMsg('') }}
+                      className="text-xs px-3 py-1.5 rounded border border-white/10 text-gray-400 hover:text-white transition-colors"
+                    >
+                      {t('Annuler', 'Cancel')}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 text-sm">{t('Pseudo', 'Username')}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{profile?.displayName || t('Non defini', 'Not set')}</span>
+                    <button
+                      onClick={() => { setEditingDisplayName(true); setNewDisplayName(profile?.displayName || ''); setDisplayNameMsg('') }}
+                      className="text-xs text-gold hover:text-gold-light transition-colors"
+                    >
+                      {t('Modifier', 'Edit')}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-between items-center">
                 <span className="text-gray-500 text-sm">UID</span>
                 <span className="text-xs text-gray-600 font-mono">{user.uid}</span>

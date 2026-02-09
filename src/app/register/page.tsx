@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
 import { useI18n } from '@/context/LanguageContext'
+import { checkUsernameAvailability } from '@/lib/firestore'
 
 export default function RegisterPage() {
   const { register } = useAuth()
@@ -14,6 +15,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -30,9 +32,33 @@ export default function RegisterPage() {
       return
     }
 
+    const trimmedDisplayName = displayName.trim()
+    if (trimmedDisplayName && trimmedDisplayName.length < 3) {
+      setError(t('Le pseudo doit contenir au moins 3 caracteres.', 'Username must be at least 3 characters.'))
+      return
+    }
+    if (trimmedDisplayName && trimmedDisplayName.length > 20) {
+      setError(t('Le pseudo ne peut pas depasser 20 caracteres.', 'Username cannot exceed 20 characters.'))
+      return
+    }
+    if (trimmedDisplayName && !/^[a-zA-Z0-9_]+$/.test(trimmedDisplayName)) {
+      setError(t('Le pseudo ne peut contenir que des lettres, chiffres et underscores.', 'Username can only contain letters, numbers, and underscores.'))
+      return
+    }
+
     setLoading(true)
     try {
-      await register(email, password)
+      // Check username uniqueness
+      if (trimmedDisplayName) {
+        const isAvailable = await checkUsernameAvailability(trimmedDisplayName)
+        if (!isAvailable) {
+          setError(t('Ce pseudo est deja pris.', 'This username is already taken.'))
+          setLoading(false)
+          return
+        }
+      }
+
+      await register(email, password, trimmedDisplayName || undefined)
       router.push('/account')
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t("Erreur lors de l'inscription", 'Registration error')
@@ -74,6 +100,24 @@ export default function RegisterPage() {
                 className="input-field"
                 placeholder={t('vous@exemple.com', 'you@example.com')}
               />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">
+                {t('Pseudo', 'Username')} <span className="text-xs text-gray-600">({t('optionnel', 'optional')})</span>
+              </label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                autoComplete="username"
+                className="input-field"
+                placeholder={t('MonPseudo', 'MyUsername')}
+                maxLength={20}
+              />
+              <p className="text-xs text-gray-600 mt-1">
+                {t('3-20 caracteres, lettres, chiffres et _ uniquement', '3-20 characters, letters, numbers, and _ only')}
+              </p>
             </div>
 
             <div>

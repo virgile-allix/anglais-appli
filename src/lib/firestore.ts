@@ -57,6 +57,7 @@ export type Order = {
 export type UserProfile = {
   uid: string
   email: string
+  displayName?: string
   isAdmin: boolean
   createdAt: Date
 }
@@ -216,6 +217,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     return {
       uid,
       email: data.email || '',
+      displayName: data.displayName || data.display_name,
       isAdmin: data.isAdmin || false,
       createdAt: data.createdAt?.toDate?.() || new Date(),
     }
@@ -243,14 +245,42 @@ export async function getAllUsers(): Promise<UserProfile[]> {
   }
 }
 
-export async function saveUserProfile(uid: string, email: string): Promise<UserProfile> {
+export async function checkUsernameAvailability(username: string): Promise<boolean> {
+  try {
+    const { db } = getFirebase()
+    const normalized = username.toLowerCase().trim()
+    const q = query(
+      collection(db, 'users'),
+      where('displayName_lower', '==', normalized)
+    )
+    const snap = await getDocs(q)
+    return snap.empty
+  } catch {
+    return false
+  }
+}
+
+export async function saveUserProfile(uid: string, email: string, displayName?: string): Promise<UserProfile> {
   const { db } = getFirebase()
-  await setDoc(doc(db, 'users', uid), {
+  const data: any = {
     email,
     isAdmin: false,
     createdAt: Timestamp.now(),
+  }
+  if (displayName) {
+    data.displayName = displayName
+    data.displayName_lower = displayName.toLowerCase().trim()
+  }
+  await setDoc(doc(db, 'users', uid), data)
+  return { uid, email, displayName, isAdmin: false, createdAt: new Date() }
+}
+
+export async function updateUserDisplayName(uid: string, displayName: string): Promise<void> {
+  const { db } = getFirebase()
+  await updateDoc(doc(db, 'users', uid), {
+    displayName,
+    displayName_lower: displayName.toLowerCase().trim(),
   })
-  return { uid, email, isAdmin: false, createdAt: new Date() }
 }
 
 export async function setUserAdmin(uid: string, isAdmin: boolean): Promise<void> {
@@ -613,6 +643,7 @@ export type Review = {
   productId: string
   uid: string
   userEmail: string
+  displayName?: string
   rating: number // 1-5
   comment: string
   createdAt: Date
@@ -634,6 +665,7 @@ export async function getProductReviews(productId: string): Promise<Review[]> {
         productId: data.productId || '',
         uid: data.uid || '',
         userEmail: data.userEmail || '',
+        displayName: data.displayName,
         rating: data.rating || 5,
         comment: data.comment || '',
         createdAt: data.createdAt?.toDate?.() || new Date(),
@@ -675,6 +707,7 @@ export async function getUserReviewForProduct(
       productId: data.productId || '',
       uid: data.uid || '',
       userEmail: data.userEmail || '',
+      displayName: data.displayName,
       rating: data.rating || 5,
       comment: data.comment || '',
       createdAt: data.createdAt?.toDate?.() || new Date(),

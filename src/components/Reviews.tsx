@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
 import { useI18n } from '@/context/LanguageContext'
-import { getProductReviews, createReview, getUserReviewForProduct, deleteReview, type Review } from '@/lib/firestore'
+import { getProductReviews, createReview, getUserReviewForProduct, deleteReview, getUserProfile, type Review } from '@/lib/firestore'
 
 type ReviewsProps = {
   productId: string
@@ -58,10 +58,15 @@ export default function Reviews({ productId }: ReviewsProps) {
     setError('')
 
     try {
+      // Fetch user profile to get displayName
+      const userProfile = await getUserProfile(user.uid)
+      const displayName = userProfile?.displayName || user.email?.split('@')[0] || 'Anonymous'
+
       await createReview({
         productId,
         uid: user.uid,
         userEmail: user.email || 'Anonymous',
+        displayName,
         rating,
         comment: comment.trim(),
       })
@@ -258,7 +263,7 @@ export default function Reviews({ productId }: ReviewsProps) {
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold text-sm">{review.userEmail}</span>
+                    <span className="font-semibold text-sm">{review.displayName || review.userEmail.split('@')[0]}</span>
                     <div className="flex">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <StarIcon key={star} filled={star <= review.rating} />
