@@ -28,14 +28,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>('en')
 
   useEffect(() => {
-    let next: Locale = 'en'
+    let next: Locale = 'en' // Anglais par defaut
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
       if (stored === 'fr' || stored === 'en') {
         next = stored
-      } else if (typeof navigator !== 'undefined') {
-        next = normalizeLocale(navigator.language)
       }
+      // Pas de detection automatique de la langue du navigateur
     } catch {
       // Ignore storage errors and keep default
     }
